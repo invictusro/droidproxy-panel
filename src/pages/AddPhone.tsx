@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Server, Signal, ChevronRight } from 'lucide-react';
+import { MapPin, Server, ChevronRight } from 'lucide-react';
 import { api } from '../api/client';
 import { useCreatePhone } from '../hooks/usePhones';
 import QRCodeModal from '../components/QRCodeModal';

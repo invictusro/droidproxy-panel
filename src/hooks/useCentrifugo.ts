@@ -5,10 +5,11 @@ export interface PhoneStatus {
   type: string;
   phone_id: string;
   status: 'online' | 'offline';
-  current_ip: string;
   active_connections: number;
   total_connections: number;
   rotation_capability?: string;
+  sim_country?: string;
+  sim_carrier?: string;
   timestamp: number;
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RotateCw, Power, Trash2, MoreVertical, Globe } from 'lucide-react';
+import { RotateCw, Power, Trash2, MoreVertical } from 'lucide-react';
 import type { PhoneWithStatus } from '../types';
 
 interface PhoneCardProps {
@@ -116,12 +116,6 @@ export default function PhoneCard({
       </div>
 
       <div className="mt-4 space-y-2">
-        {phone.current_ip && (
-          <div className="flex items-center text-sm text-gray-600">
-            <Globe className="w-4 h-4 mr-2" />
-            <span>IP: {phone.current_ip}</span>
-          </div>
-        )}
         {phone.hub_server && (
           <div className="text-sm text-gray-600">
             Server: {phone.hub_server.location}

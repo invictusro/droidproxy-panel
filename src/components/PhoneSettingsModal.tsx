@@ -64,7 +64,7 @@ export default function PhoneSettingsModal({
   const [formData, setFormData] = useState({
     name: '',
     auth_type: 'ip' as AuthType,
-    proxy_type: 'both' as ProxyType,
+    proxy_type: 'socks5' as ProxyType,
     allowed_ip: '',
     username: '',
     password: '',
@@ -157,7 +157,7 @@ export default function PhoneSettingsModal({
         });
       }
       setShowAddForm(false);
-      setFormData({ name: '', auth_type: 'ip', proxy_type: 'both', allowed_ip: '', username: '', password: '' });
+      setFormData({ name: '', auth_type: 'ip', proxy_type: 'socks5', allowed_ip: '', username: '', password: '' });
       loadData();
     } catch (error) {
       console.error('Failed to create credential:', error);
@@ -248,7 +248,7 @@ export default function PhoneSettingsModal({
     switch (type) {
       case 'socks5': return 'SOCKS5';
       case 'http': return 'HTTP';
-      case 'both': return 'Both';
+      case 'both': return 'Both'; // Legacy, no longer creatable
     }
   };
 
@@ -439,9 +439,8 @@ export default function PhoneSettingsModal({
                             onChange={(e) => setFormData({ ...formData, proxy_type: e.target.value as ProxyType })}
                             className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
                           >
-                            <option value="both">Both (SOCKS5 + HTTP)</option>
-                            <option value="socks5">SOCKS5 only</option>
-                            <option value="http">HTTP only</option>
+                            <option value="socks5">SOCKS5</option>
+                            <option value="http">HTTP</option>
                           </select>
                         </div>
                         {formData.auth_type === 'ip' ? (

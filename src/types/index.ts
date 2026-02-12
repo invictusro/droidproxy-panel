@@ -71,7 +71,6 @@ export type PhoneStatus = 'pending' | 'online' | 'offline';
 // Phone with real-time status merged from Centrifugo
 export interface PhoneWithStatus extends Phone {
   status: PhoneStatus;
-  current_ip?: string;
   last_seen?: string;
   rotation_capability?: string; // e.g., "IP rotation available (Digital Assistant)" or "not available"
 }
@@ -108,6 +107,7 @@ export interface ConnectionCredential {
   connection_count: number;
   expires_at?: string;
   proxy_domain?: string; // DNS domain for this credential (e.g., "abc123.cn.yalx.in")
+  blocked_domains?: string[]; // Domain blocking patterns (e.g., "*.example.com", "example.com:443")
   is_active: boolean;
   last_used?: string;
   created_at: string;
