@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, BarChart3, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, BarChart3, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../api/client';
 import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType } from '../types';
 
@@ -28,6 +28,7 @@ interface Props {
   onRotateIP: () => void;
   onRestart: () => void;
   onDelete: () => void;
+  onPhoneUpdate?: (updates: Partial<PhoneWithStatus>) => void;
   isRotating: boolean;
   isRestarting: boolean;
 }
@@ -38,6 +39,7 @@ export default function PhoneSettingsModal({
   onRotateIP,
   onRestart,
   onDelete,
+  onPhoneUpdate,
   isRotating,
   isRestarting
 }: Props) {
@@ -67,6 +69,12 @@ export default function PhoneSettingsModal({
     username: '',
     password: '',
   });
+
+  // Blocked domains state
+  const [expandedBlockedDomains, setExpandedBlockedDomains] = useState<string | null>(null);
+  const [editingBlockedDomains, setEditingBlockedDomains] = useState<{ [credId: string]: string[] }>({});
+  const [newDomainPattern, setNewDomainPattern] = useState('');
+  const [savingBlockedDomains, setSavingBlockedDomains] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -140,7 +148,14 @@ export default function PhoneSettingsModal({
         data.username = formData.username;
         data.password = formData.password;
       }
-      await api.createCredential(phone.id, data);
+      const response = await api.createCredential(phone.id, data);
+      // Update phone ports if they were just assigned
+      if (response.data.proxy_port && onPhoneUpdate) {
+        onPhoneUpdate({
+          proxy_port: response.data.proxy_port,
+          http_port: response.data.http_port,
+        });
+      }
       setShowAddForm(false);
       setFormData({ name: '', auth_type: 'ip', proxy_type: 'both', allowed_ip: '', username: '', password: '' });
       loadData();
@@ -166,6 +181,51 @@ export default function PhoneSettingsModal({
     } catch (error) {
       console.error('Failed to toggle credential:', error);
     }
+  };
+
+  const handleToggleBlockedDomains = (credId: string, currentDomains: string[] | undefined) => {
+    if (expandedBlockedDomains === credId) {
+      setExpandedBlockedDomains(null);
+    } else {
+      setExpandedBlockedDomains(credId);
+      // Initialize editing state with current domains
+      setEditingBlockedDomains(prev => ({
+        ...prev,
+        [credId]: currentDomains || []
+      }));
+    }
+    setNewDomainPattern('');
+  };
+
+  const handleAddDomainPattern = (credId: string) => {
+    const pattern = newDomainPattern.trim();
+    if (!pattern) return;
+
+    setEditingBlockedDomains(prev => ({
+      ...prev,
+      [credId]: [...(prev[credId] || []), pattern]
+    }));
+    setNewDomainPattern('');
+  };
+
+  const handleRemoveDomainPattern = (credId: string, index: number) => {
+    setEditingBlockedDomains(prev => ({
+      ...prev,
+      [credId]: (prev[credId] || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSaveBlockedDomains = async (credId: string) => {
+    setSavingBlockedDomains(credId);
+    try {
+      const domains = editingBlockedDomains[credId] || [];
+      await api.updateCredential(phone.id, credId, { blocked_domains: domains });
+      await loadData();
+      setExpandedBlockedDomains(null);
+    } catch (error) {
+      console.error('Failed to save blocked domains:', error);
+    }
+    setSavingBlockedDomains(null);
   };
 
   const handleRegenerateToken = async () => {
@@ -510,6 +570,98 @@ export default function PhoneSettingsModal({
                                 </button>
                               </div>
                             ))}
+                          </div>
+
+                          {/* Blocked Domains Section */}
+                          <div className="mt-3 pt-3 border-t border-zinc-100">
+                            <button
+                              onClick={() => handleToggleBlockedDomains(cred.id, cred.blocked_domains)}
+                              className="flex items-center justify-between w-full text-left text-xs hover:bg-zinc-50 -mx-1 px-1 py-1 rounded transition-colors"
+                            >
+                              <span className="flex items-center gap-1.5 text-zinc-600">
+                                <Shield className="w-3.5 h-3.5" />
+                                <span className="font-medium">Blocked Domains</span>
+                                {cred.blocked_domains && cred.blocked_domains.length > 0 && (
+                                  <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">
+                                    {cred.blocked_domains.length}
+                                  </span>
+                                )}
+                              </span>
+                              {expandedBlockedDomains === cred.id ? (
+                                <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
+                              ) : (
+                                <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+                              )}
+                            </button>
+
+                            {expandedBlockedDomains === cred.id && (
+                              <div className="mt-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+                                <p className="text-[10px] text-zinc-500 mb-2">
+                                  Block domains for this credential. Patterns: <code className="bg-zinc-200 px-1 rounded">example.com</code>, <code className="bg-zinc-200 px-1 rounded">*.example.com</code>, <code className="bg-zinc-200 px-1 rounded">example.com:443</code>
+                                </p>
+
+                                {/* Current blocked domains */}
+                                {(editingBlockedDomains[cred.id] || []).length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 mb-2">
+                                    {(editingBlockedDomains[cred.id] || []).map((pattern, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-200"
+                                      >
+                                        <span className="font-mono">{pattern}</span>
+                                        <button
+                                          onClick={() => handleRemoveDomainPattern(cred.id, idx)}
+                                          className="hover:bg-red-200 rounded p-0.5 transition-colors"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Add new pattern */}
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={newDomainPattern}
+                                    onChange={(e) => setNewDomainPattern(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddDomainPattern(cred.id);
+                                      }
+                                    }}
+                                    placeholder="*.stripe.com"
+                                    className="flex-1 px-2 py-1.5 text-xs border border-zinc-200 rounded-md bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+                                  />
+                                  <button
+                                    onClick={() => handleAddDomainPattern(cred.id)}
+                                    disabled={!newDomainPattern.trim()}
+                                    className="px-2 py-1.5 text-xs bg-zinc-200 text-zinc-700 rounded-md hover:bg-zinc-300 disabled:opacity-50 transition-colors"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                {/* Save button */}
+                                <div className="flex justify-end mt-3 gap-2">
+                                  <button
+                                    onClick={() => setExpandedBlockedDomains(null)}
+                                    className="px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-200 rounded-md transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveBlockedDomains(cred.id)}
+                                    disabled={savingBlockedDomains === cred.id}
+                                    className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                  >
+                                    {savingBlockedDomains === cred.id ? 'Saving...' : 'Save'}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}

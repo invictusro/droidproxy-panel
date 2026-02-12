@@ -143,7 +143,6 @@ export default function Phones() {
       const liveStatus = statuses[phone.id];
       // Determine status: Centrifugo data > derived from paired_at
       const status = liveStatus?.status || (phone.paired_at ? 'offline' : 'pending');
-      const current_ip = liveStatus?.current_ip;
       const last_seen = liveStatus?.timestamp ? new Date(liveStatus.timestamp).toISOString() : undefined;
       // Map rotation capability codes to human-readable strings
       const rawCapability = liveStatus?.rotation_capability;
@@ -167,12 +166,16 @@ export default function Phones() {
             rotation_capability = rawCapability.includes('available') ? rawCapability : 'IP rotation not available';
         }
       }
+      // Get SIM info from Centrifugo status (real-time) or fallback to API data (stored)
+      const sim_country = liveStatus?.sim_country || phone.sim_country;
+      const sim_carrier = liveStatus?.sim_carrier || phone.sim_carrier;
       return {
         ...phone,
         status,
-        current_ip,
         last_seen,
         rotation_capability,
+        sim_country,
+        sim_carrier,
       } as PhoneWithStatus;
     });
   }, [phones, statuses]);
@@ -712,7 +715,6 @@ export default function Phones() {
                     <TableHead className="font-semibold text-foreground">Name</TableHead>
                     <TableHead className="font-semibold text-foreground">Group</TableHead>
                     <TableHead className="font-semibold text-foreground">Status</TableHead>
-                    <TableHead className="font-semibold text-foreground">IP Address</TableHead>
                     <TableHead className="font-semibold text-foreground">Server</TableHead>
                     <TableHead className="font-semibold text-foreground">SIM</TableHead>
                     <TableHead className="font-semibold text-foreground">Connection</TableHead>
@@ -784,11 +786,6 @@ export default function Phones() {
                           )}
                         </TableCell>
                         <TableCell>{getStatusBadge(phone.status)}</TableCell>
-                        <TableCell>
-                          <code className="text-sm font-mono text-zinc-600 bg-zinc-100 border border-zinc-200 px-2 py-1 rounded-md">
-                            {phone.current_ip || '-'}
-                          </code>
-                        </TableCell>
                         <TableCell className="text-muted-foreground">
                           {phone.hub_server?.location || '-'}
                         </TableCell>
@@ -927,6 +924,7 @@ export default function Phones() {
           onRotateIP={() => handleRotateIP(selectedPhone.id)}
           onRestart={() => handleRestart(selectedPhone.id)}
           onDelete={() => handleDelete(selectedPhone.id)}
+          onPhoneUpdate={(updates) => setSelectedPhone({ ...selectedPhone, ...updates })}
           isRotating={rotatingIds.has(selectedPhone.id)}
           isRestarting={restartingIds.has(selectedPhone.id)}
         />
