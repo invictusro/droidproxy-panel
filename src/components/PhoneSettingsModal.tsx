@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp, Activity, Database } from 'lucide-react';
+import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp, ChevronLeft, Activity, Database, Globe, Download } from 'lucide-react';
 import { api } from '../api/client';
-import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType } from '../types';
+import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType, DomainStats } from '../types';
 
 type RotationMode = 'off' | 'timed' | 'api';
 
@@ -45,7 +45,7 @@ export default function PhoneSettingsModal({
   isRotating,
   isRestarting
 }: Props) {
-  const [activeTab, setActiveTab] = useState<'credentials' | 'rotation' | 'usage' | 'actions'>('credentials');
+  const [activeTab, setActiveTab] = useState<'credentials' | 'rotation' | 'usage' | 'access-logs' | 'actions'>('credentials');
   const [credentials, setCredentials] = useState<ConnectionCredential[]>([]);
   const [rotationToken, setRotationToken] = useState<RotationToken | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,10 @@ export default function PhoneSettingsModal({
   const [uptimeData, setUptimeData] = useState<UptimeData | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [usageDateRange, setUsageDateRange] = useState<'7d' | '30d' | '90d'>('30d');
-  const [uptimeDateRange, setUptimeDateRange] = useState<'today' | '7d' | '30d'>('7d');
+  const [uptimeDateRange, setUptimeDateRange] = useState<'today' | '7d' | '30d'>('30d');
+  const [selectedUptimeDay, setSelectedUptimeDay] = useState<string | null>(null); // For drill-down into specific day
+  const [selectedDayUptimeData, setSelectedDayUptimeData] = useState<UptimeData | null>(null);
+  const [loadingDayUptime, setLoadingDayUptime] = useState(false);
 
   // Rotation settings state
   const [rotationMode, setRotationMode] = useState<RotationMode>('off');
@@ -79,6 +82,23 @@ export default function PhoneSettingsModal({
   const [editingBlockedDomains, setEditingBlockedDomains] = useState<{ [credId: string]: string[] }>({});
   const [newDomainPattern, setNewDomainPattern] = useState('');
   const [savingBlockedDomains, setSavingBlockedDomains] = useState<string | null>(null);
+
+  // Access Logs state
+  const [domainStats, setDomainStats] = useState<DomainStats[]>([]);
+  const [loadingDomainStats, setLoadingDomainStats] = useState(false);
+  const [logRetentionWeeks, setLogRetentionWeeks] = useState(12);
+  const [savingRetention, setSavingRetention] = useState(false);
+  const [exportingLogs, setExportingLogs] = useState(false);
+  const [totalLogs, setTotalLogs] = useState(0);
+  // Date range for export - default 7 days
+  const [exportStartDate, setExportStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [exportEndDate, setExportEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
 
   useEffect(() => {
     loadData();
@@ -113,8 +133,18 @@ export default function PhoneSettingsModal({
   useEffect(() => {
     if (activeTab === 'usage') {
       loadUsageData();
+      setSelectedUptimeDay(null); // Reset drill-down when changing range
+      setSelectedDayUptimeData(null);
     }
   }, [activeTab, usageDateRange, uptimeDateRange]);
+
+  // Load access logs data when access-logs tab is selected
+  useEffect(() => {
+    if (activeTab === 'access-logs') {
+      loadDomainStats();
+      loadLogRetention();
+    }
+  }, [activeTab]);
 
   const loadUsageData = async () => {
     setLoadingUsage(true);
@@ -132,6 +162,131 @@ export default function PhoneSettingsModal({
       console.error('Failed to load usage data:', error);
     }
     setLoadingUsage(false);
+  };
+
+  const loadDomainStats = async () => {
+    setLoadingDomainStats(true);
+    try {
+      const [statsRes, logsRes] = await Promise.all([
+        api.getPhoneDomainStats(phone.id, { limit: 20 }),
+        api.getPhoneAccessLogs(phone.id, { limit: 1 }), // Just to get total count
+      ]);
+      setDomainStats(statsRes.data.stats || []);
+      setTotalLogs(logsRes.data.total || 0);
+    } catch (error) {
+      console.error('Failed to load domain stats:', error);
+    }
+    setLoadingDomainStats(false);
+  };
+
+  const exportLogsCSV = async () => {
+    setExportingLogs(true);
+    try {
+      // Fetch all logs for date range (paginate if needed)
+      let allLogs: any[] = [];
+      let offset = 0;
+      const limit = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const res = await api.getPhoneAccessLogs(phone.id, {
+          limit,
+          offset,
+          start_date: exportStartDate,
+          end_date: exportEndDate,
+        });
+        const logs = res.data.logs || [];
+        allLogs = allLogs.concat(logs);
+        hasMore = logs.length === limit;
+        offset += limit;
+      }
+
+      if (allLogs.length === 0) {
+        alert('No logs found for the selected date range.');
+        setExportingLogs(false);
+        return;
+      }
+
+      // Generate CSV
+      const headers = ['Timestamp', 'Domain', 'Port', 'Protocol', 'Client IP', 'Credential', 'Bytes In', 'Bytes Out', 'Duration (ms)', 'Blocked'];
+      const rows = allLogs.map(log => [
+        new Date(log.timestamp).toISOString(),
+        log.domain,
+        log.port,
+        log.protocol,
+        log.client_ip,
+        log.credential_name || '',
+        log.bytes_in,
+        log.bytes_out,
+        log.duration_ms,
+        log.blocked ? 'Yes' : 'No'
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      // Download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `access-logs-${phone.name}-${exportStartDate}-to-${exportEndDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export access logs:', error);
+      alert('Failed to export logs. Please try again.');
+    }
+    setExportingLogs(false);
+  };
+
+  // Get the earliest allowed date based on retention
+  const getMinExportDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - (logRetentionWeeks * 7));
+    return d.toISOString().split('T')[0];
+  };
+
+  const loadLogRetention = async () => {
+    try {
+      const res = await api.getPhoneLogRetention(phone.id);
+      setLogRetentionWeeks(res.data.log_retention_weeks || 12);
+    } catch (error) {
+      console.error('Failed to load log retention:', error);
+    }
+  };
+
+  const saveLogRetention = async (weeks: number) => {
+    setSavingRetention(true);
+    try {
+      await api.updatePhoneLogRetention(phone.id, weeks);
+      setLogRetentionWeeks(weeks);
+    } catch (error) {
+      console.error('Failed to save log retention:', error);
+    }
+    setSavingRetention(false);
+  };
+
+  // Load hourly data for a specific day (drill-down)
+  const loadDayUptimeData = async (date: string) => {
+    setLoadingDayUptime(true);
+    setSelectedUptimeDay(date);
+    try {
+      const res = await api.getPhoneUptime(phone.id, date, date);
+      setSelectedDayUptimeData(res.data);
+    } catch (error) {
+      console.error('Failed to load day uptime data:', error);
+    }
+    setLoadingDayUptime(false);
+  };
+
+  const clearSelectedDay = () => {
+    setSelectedUptimeDay(null);
+    setSelectedDayUptimeData(null);
   };
 
   const loadData = async () => {
@@ -380,6 +535,16 @@ export default function PhoneSettingsModal({
             }`}
           >
             Usage
+          </button>
+          <button
+            onClick={() => setActiveTab('access-logs')}
+            className={`px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'access-logs'
+                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white'
+                : 'text-zinc-500 hover:text-zinc-700'
+            }`}
+          >
+            Access Logs
           </button>
           <button
             onClick={() => setActiveTab('actions')}
@@ -893,103 +1058,178 @@ export default function PhoneSettingsModal({
                           <h3 className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
                             <Activity className="w-4 h-4" />
                             Uptime
-                          </h3>
-                          <div className="flex gap-1">
-                            {(['today', '7d', '30d'] as const).map((period) => (
+                            {selectedUptimeDay && (
                               <button
-                                key={period}
-                                onClick={() => setUptimeDateRange(period)}
-                                className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                                  uptimeDateRange === period
-                                    ? 'bg-emerald-100 text-emerald-700 font-medium'
-                                    : 'text-zinc-500 hover:bg-zinc-100'
-                                }`}
+                                onClick={clearSelectedDay}
+                                className="ml-2 px-2 py-0.5 text-[10px] bg-zinc-200 text-zinc-600 rounded hover:bg-zinc-300 transition-colors flex items-center gap-1"
                               >
-                                {period === 'today' ? 'Today' : period === '7d' ? '7 Days' : '30 Days'}
+                                <ChevronLeft className="w-3 h-3" />
+                                {uptimeDateRange === '7d' ? '7 Days' : '30 Days'}
                               </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Uptime display */}
-                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <p className="text-xs text-zinc-500 mb-1">
-                                {uptimeDateRange === 'today' ? 'Today' : uptimeDateRange === '7d' ? 'Last 7 Days' : 'Last 30 Days'}
-                              </p>
-                              <p className="text-3xl font-bold text-zinc-900">
-                                {uptimeData
-                                  ? `${(uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average).toFixed(1)}%`
-                                  : '-'}
-                              </p>
-                            </div>
-                            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                              !uptimeData ? 'bg-zinc-200' :
-                              (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 90 ? 'bg-emerald-100' :
-                              (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 50 ? 'bg-amber-100' : 'bg-red-100'
-                            }`}>
-                              <Activity className={`w-8 h-8 ${
-                                !uptimeData ? 'text-zinc-400' :
-                                (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 90 ? 'text-emerald-600' :
-                                (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 50 ? 'text-amber-600' : 'text-red-600'
-                              }`} />
-                            </div>
-                          </div>
-
-                          {/* Hourly breakdown for today */}
-                          {uptimeDateRange === 'today' && uptimeData && uptimeData.hourly && uptimeData.hourly.length > 0 && (
-                            <div className="pt-3 border-t border-zinc-200">
-                              <p className="text-[10px] text-zinc-400 mb-2">Hourly breakdown</p>
-                              <div className="flex items-end gap-0.5 h-12">
-                                {uptimeData.hourly.map((h, idx) => (
-                                  <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer">
-                                    <div
-                                      className={`w-full rounded-t transition-all ${
-                                        h.uptime >= 90 ? 'bg-emerald-500' :
-                                        h.uptime >= 50 ? 'bg-amber-500' : 'bg-red-500'
-                                      }`}
-                                      style={{ height: `${Math.max(2, h.uptime * 0.48)}px` }}
-                                      title={`${h.hour}:00 - ${h.uptime.toFixed(0)}%`}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="flex justify-between text-[8px] text-zinc-400 mt-1">
-                                <span>00:00</span>
-                                <span>12:00</span>
-                                <span>23:00</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Daily breakdown for 7d/30d */}
-                          {uptimeDateRange !== 'today' && uptimeData && uptimeData.daily && uptimeData.daily.length > 0 && (
-                            <div className="pt-3 border-t border-zinc-200">
-                              <p className="text-[10px] text-zinc-400 mb-2">Daily breakdown</p>
-                              <div className="flex items-end gap-1 h-12">
-                                {uptimeData.daily.slice(0, uptimeDateRange === '7d' ? 7 : 30).reverse().map((day, idx) => (
-                                  <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer">
-                                    <div
-                                      className={`w-full rounded-t transition-all ${
-                                        day.uptime_percentage >= 90 ? 'bg-emerald-500' :
-                                        day.uptime_percentage >= 50 ? 'bg-amber-500' : 'bg-red-500'
-                                      }`}
-                                      style={{ height: `${Math.max(4, day.uptime_percentage * 0.48)}px` }}
-                                      title={`${day.date}: ${day.uptime_percentage.toFixed(1)}%`}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
+                            )}
+                          </h3>
+                          {!selectedUptimeDay && (
+                            <div className="flex gap-1">
+                              {(['7d', '30d'] as const).map((period) => (
+                                <button
+                                  key={period}
+                                  onClick={() => setUptimeDateRange(period)}
+                                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                                    uptimeDateRange === period
+                                      ? 'bg-emerald-100 text-emerald-700 font-medium'
+                                      : 'text-zinc-500 hover:bg-zinc-100'
+                                  }`}
+                                >
+                                  {period === '7d' ? '7 Days' : '30 Days'}
+                                </button>
+                              ))}
                             </div>
                           )}
                         </div>
 
-                        {uptimeData && uptimeData.last_24_hours === 0 && uptimeData.period_average === 0 && (
-                          <p className="text-xs text-zinc-400 mt-2 text-center">
-                            Uptime data will appear once the phone reports status changes.
-                          </p>
+                        {/* Drill-down: Hourly view for selected day */}
+                        {selectedUptimeDay && (
+                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                            {loadingDayUptime ? (
+                              <div className="flex justify-center py-4">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+                              </div>
+                            ) : selectedDayUptimeData ? (
+                              <>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div>
+                                    <p className="text-xs text-zinc-500 mb-1">
+                                      {new Date(selectedUptimeDay + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                    </p>
+                                    <p className="text-2xl font-bold text-zinc-900">
+                                      {selectedDayUptimeData.period_average.toFixed(1)}%
+                                    </p>
+                                  </div>
+                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                    selectedDayUptimeData.period_average >= 90 ? 'bg-emerald-100' :
+                                    selectedDayUptimeData.period_average >= 50 ? 'bg-amber-100' : 'bg-red-100'
+                                  }`}>
+                                    <Activity className={`w-6 h-6 ${
+                                      selectedDayUptimeData.period_average >= 90 ? 'text-emerald-600' :
+                                      selectedDayUptimeData.period_average >= 50 ? 'text-amber-600' : 'text-red-600'
+                                    }`} />
+                                  </div>
+                                </div>
+                                {selectedDayUptimeData.hourly && selectedDayUptimeData.hourly.length > 0 && (
+                                  <div className="pt-3 border-t border-zinc-200">
+                                    <p className="text-[10px] text-zinc-400 mb-2">Hourly breakdown (click bars for details)</p>
+                                    <div className="flex items-end gap-0.5 h-16">
+                                      {selectedDayUptimeData.hourly.map((h, idx) => (
+                                        <div key={idx} className="flex-1 flex flex-col items-center group relative">
+                                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                            {h.hour}:00 - {h.uptime.toFixed(0)}%
+                                          </div>
+                                          <div
+                                            className={`w-full rounded-t transition-all hover:opacity-80 ${
+                                              h.uptime >= 90 ? 'bg-emerald-500' :
+                                              h.uptime >= 50 ? 'bg-amber-500' :
+                                              h.uptime > 0 ? 'bg-red-500' : 'bg-zinc-300'
+                                            }`}
+                                            style={{ height: `${Math.max(2, h.uptime * 0.64)}px` }}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="flex justify-between text-[8px] text-zinc-400 mt-1">
+                                      <span>00:00</span>
+                                      <span>06:00</span>
+                                      <span>12:00</span>
+                                      <span>18:00</span>
+                                      <span>23:00</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-sm text-zinc-500 text-center py-4">No data for this day</p>
+                            )}
+                          </div>
                         )}
+
+                        {/* Main uptime display (daily view) */}
+                        {!selectedUptimeDay && (
+                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <p className="text-xs text-zinc-500 mb-1">
+                                  {uptimeDateRange === '7d' ? 'Last 7 Days Average' : 'Last 30 Days Average'}
+                                </p>
+                                <p className="text-3xl font-bold text-zinc-900">
+                                  {uptimeData ? `${uptimeData.period_average.toFixed(1)}%` : '-'}
+                                </p>
+                              </div>
+                              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                                !uptimeData ? 'bg-zinc-200' :
+                                uptimeData.period_average >= 90 ? 'bg-emerald-100' :
+                                uptimeData.period_average >= 50 ? 'bg-amber-100' : 'bg-red-100'
+                              }`}>
+                                <Activity className={`w-8 h-8 ${
+                                  !uptimeData ? 'text-zinc-400' :
+                                  uptimeData.period_average >= 90 ? 'text-emerald-600' :
+                                  uptimeData.period_average >= 50 ? 'text-amber-600' : 'text-red-600'
+                                }`} />
+                              </div>
+                            </div>
+
+                            {/* Daily breakdown - clickable bars */}
+                            {uptimeData && uptimeData.daily && uptimeData.daily.length > 0 && (
+                              <div className="pt-3 border-t border-zinc-200">
+                                <p className="text-[10px] text-zinc-400 mb-2">Daily breakdown (click a day to see hourly details)</p>
+                                <div className="flex items-end gap-1 h-16">
+                                  {uptimeData.daily.slice(0, uptimeDateRange === '7d' ? 7 : 30).reverse().map((day, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex-1 flex flex-col items-center group relative cursor-pointer"
+                                      onClick={() => loadDayUptimeData(day.date)}
+                                    >
+                                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                        {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: {day.uptime_percentage.toFixed(1)}%
+                                      </div>
+                                      <div
+                                        className={`w-full rounded-t transition-all hover:opacity-80 ${
+                                          day.uptime_percentage >= 90 ? 'bg-emerald-500' :
+                                          day.uptime_percentage >= 50 ? 'bg-amber-500' :
+                                          day.uptime_percentage > 0 ? 'bg-red-500' : 'bg-zinc-300'
+                                        }`}
+                                        style={{ height: `${Math.max(4, day.uptime_percentage * 0.64)}px` }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                                {/* Date labels */}
+                                <div className="flex justify-between text-[8px] text-zinc-400 mt-1">
+                                  {uptimeDateRange === '7d' ? (
+                                    <>
+                                      <span>{uptimeData.daily.length > 0 ? new Date(uptimeData.daily[uptimeData.daily.length - 1]?.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+                                      <span>Today</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span>30 days ago</span>
+                                      <span>15 days ago</span>
+                                      <span>Today</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* No data message */}
+                            {(!uptimeData || !uptimeData.daily || uptimeData.daily.length === 0) && (
+                              <div className="pt-3 border-t border-zinc-200">
+                                <p className="text-xs text-zinc-400 text-center py-4">
+                                  No uptime data yet. Data will appear once the phone reports status changes.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                       </div>
 
                       {/* Data Usage Section */}
@@ -1097,6 +1337,142 @@ export default function PhoneSettingsModal({
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Access Logs Tab */}
+              {activeTab === 'access-logs' && (
+                <div>
+                  {/* Export Section */}
+                  <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 mb-6">
+                    <h4 className="text-sm font-medium text-zinc-700 flex items-center gap-2 mb-3">
+                      <Download className="w-4 h-4" />
+                      Export Logs
+                    </h4>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div>
+                        <label className="block text-xs text-zinc-500 mb-1">From</label>
+                        <input
+                          type="date"
+                          value={exportStartDate}
+                          onChange={(e) => setExportStartDate(e.target.value)}
+                          min={getMinExportDate()}
+                          max={exportEndDate}
+                          className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-500 mb-1">To</label>
+                        <input
+                          type="date"
+                          value={exportEndDate}
+                          onChange={(e) => setExportEndDate(e.target.value)}
+                          min={exportStartDate}
+                          max={new Date().toISOString().split('T')[0]}
+                          className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+                        />
+                      </div>
+                      <button
+                        onClick={exportLogsCSV}
+                        disabled={exportingLogs || totalLogs === 0}
+                        className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50 shadow-sm transition-all"
+                      >
+                        {exportingLogs ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Exporting...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 mr-2" />
+                            Download CSV
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-2">
+                      Logs are retained for {logRetentionWeeks} {logRetentionWeeks === 1 ? 'week' : 'weeks'}
+                    </p>
+                  </div>
+
+                  {/* Top Domains */}
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-zinc-700 mb-3 flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      Top Domains
+                    </h4>
+                    {loadingDomainStats ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                      </div>
+                    ) : domainStats.length === 0 ? (
+                      <div className="text-center py-6 text-zinc-500 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <Globe className="w-10 h-10 mx-auto text-zinc-300 mb-2" />
+                        <p className="text-sm">No domain statistics yet.</p>
+                        <p className="text-xs text-zinc-400 mt-1">Stats will appear once proxy connections are made.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {domainStats.map((stat, idx) => (
+                          <div
+                            key={stat.domain}
+                            className="p-3 bg-white border border-zinc-200 rounded-lg"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono text-zinc-400 w-5">{idx + 1}</span>
+                                <Globe className="w-4 h-4 text-emerald-500" />
+                                <span className="font-medium text-zinc-900 text-sm">{stat.domain}</span>
+                              </div>
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">
+                                {stat.access_count} requests
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-zinc-500 ml-7">
+                              <span className="flex items-center gap-1">
+                                <ArrowDown className="w-3 h-3" />
+                                {formatBytes(stat.bytes_in)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <ArrowUp className="w-3 h-3" />
+                                {formatBytes(stat.bytes_out)}
+                              </span>
+                              <span className="text-zinc-400">
+                                Last: {new Date(stat.last_access).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Log Retention Settings */}
+                  <div className="pt-4 border-t border-zinc-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-zinc-700">Log Retention</h4>
+                        <p className="text-xs text-zinc-500">Logs older than this will be automatically deleted</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={logRetentionWeeks}
+                          onChange={(e) => saveLogRetention(parseInt(e.target.value))}
+                          disabled={savingRetention}
+                          className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 disabled:opacity-50"
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((weeks) => (
+                            <option key={weeks} value={weeks}>
+                              {weeks} {weeks === 1 ? 'week' : 'weeks'}
+                            </option>
+                          ))}
+                        </select>
+                        {savingRetention && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

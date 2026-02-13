@@ -63,6 +63,7 @@ export interface Phone {
   first_credential?: CredentialSummary;
   sim_country?: string;  // ISO country code (e.g., "US", "GB")
   sim_carrier?: string;  // Carrier name
+  log_retention_weeks?: number; // Access log retention (1-12 weeks)
   created_at: string;
 }
 
@@ -157,4 +158,41 @@ export interface ExportResult {
   format: string;
   content: string;
   lines?: string[];
+}
+
+export interface AccessLog {
+  id: string;
+  credential_id: string;
+  credential_name?: string;
+  phone_id: string;
+  phone_name?: string;
+  client_ip: string;
+  domain: string;
+  port: number;
+  protocol: string;
+  bytes_in: number;
+  bytes_out: number;
+  duration_ms: number;
+  blocked: boolean;
+  timestamp: string;
+}
+
+export interface DomainStats {
+  domain: string;
+  access_count: number;
+  bytes_in: number;
+  bytes_out: number;
+  last_access: string;
+}
+
+export interface AccessLogFilter {
+  phone_id?: string;
+  credential_id?: string;
+  client_ip?: string;
+  domain?: string;
+  start_date?: string;
+  end_date?: string;
+  blocked?: boolean;
+  limit?: number;
+  offset?: number;
 }

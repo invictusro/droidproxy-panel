@@ -174,16 +174,82 @@ export const api = {
     const formData = new FormData();
     formData.append('binary', file);
     formData.append('version', version);
-    return client.post('/admin/fleet/binary', formData, {
+    return client.post('/fleet/binary', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  getLatestBinaryInfo: () => client.get('/admin/fleet/binary'),
-  getFleetVersions: () => client.get('/admin/fleet/versions'),
+  getLatestBinaryInfo: () => client.get('/fleet/binary'),
+  getFleetVersions: () => client.get('/fleet/versions'),
   triggerServerUpdate: (serverId: string) =>
-    client.post(`/admin/fleet/update/${serverId}`),
+    client.post(`/fleet/update/${serverId}`),
   triggerFleetUpdate: (targetVersion: string) =>
-    client.post('/admin/fleet/update', { target_version: targetVersion }),
+    client.post('/fleet/update', { target_version: targetVersion }),
+
+  // Access Logs (per-phone)
+  getPhoneAccessLogs: (phoneId: string, params?: {
+    limit?: number;
+    offset?: number;
+    start_date?: string;
+    end_date?: string;
+    domain?: string;
+    credential_id?: string;
+    blocked?: boolean;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.offset) searchParams.append('offset', String(params.offset));
+    if (params?.start_date) searchParams.append('start_date', params.start_date);
+    if (params?.end_date) searchParams.append('end_date', params.end_date);
+    if (params?.domain) searchParams.append('domain', params.domain);
+    if (params?.credential_id) searchParams.append('credential_id', params.credential_id);
+    if (params?.blocked !== undefined) searchParams.append('blocked', String(params.blocked));
+    const query = searchParams.toString();
+    return client.get(`/phones/${phoneId}/access-logs${query ? `?${query}` : ''}`);
+  },
+  getPhoneDomainStats: (phoneId: string, params?: {
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.start_date) searchParams.append('start_date', params.start_date);
+    if (params?.end_date) searchParams.append('end_date', params.end_date);
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    const query = searchParams.toString();
+    return client.get(`/phones/${phoneId}/domain-stats${query ? `?${query}` : ''}`);
+  },
+
+  // Log Retention
+  getPhoneLogRetention: (phoneId: string) => client.get(`/phones/${phoneId}/log-retention`),
+  updatePhoneLogRetention: (phoneId: string, weeks: number) =>
+    client.put(`/phones/${phoneId}/log-retention`, { log_retention_weeks: weeks }),
+
+  // Access Logs (admin - all phones)
+  getAllAccessLogs: (params?: {
+    limit?: number;
+    offset?: number;
+    phone_id?: string;
+    credential_id?: string;
+    client_ip?: string;
+    domain?: string;
+    start_date?: string;
+    end_date?: string;
+    blocked?: boolean;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.offset) searchParams.append('offset', String(params.offset));
+    if (params?.phone_id) searchParams.append('phone_id', params.phone_id);
+    if (params?.credential_id) searchParams.append('credential_id', params.credential_id);
+    if (params?.client_ip) searchParams.append('client_ip', params.client_ip);
+    if (params?.domain) searchParams.append('domain', params.domain);
+    if (params?.start_date) searchParams.append('start_date', params.start_date);
+    if (params?.end_date) searchParams.append('end_date', params.end_date);
+    if (params?.blocked !== undefined) searchParams.append('blocked', String(params.blocked));
+    const query = searchParams.toString();
+    return client.get(`/admin/access-logs${query ? `?${query}` : ''}`);
+  },
+  getAccessLogStats: () => client.get('/admin/access-logs/stats'),
 };
 
 export default client;
