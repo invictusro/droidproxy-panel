@@ -85,9 +85,21 @@ export const api = {
     rotation_interval_minutes?: number;
   }) => client.put(`/phones/${phoneId}/rotation-settings`, data),
 
-  // Usage & Uptime
-  getPhoneDataUsage: (phoneId: string) => client.get(`/phones/${phoneId}/data-usage`),
-  getPhoneUptime: (phoneId: string) => client.get(`/phones/${phoneId}/uptime`),
+  // Usage & Uptime (supports date range: start_date, end_date in YYYY-MM-DD format)
+  getPhoneDataUsage: (phoneId: string, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const query = params.toString();
+    return client.get(`/phones/${phoneId}/data-usage${query ? `?${query}` : ''}`);
+  },
+  getPhoneUptime: (phoneId: string, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const query = params.toString();
+    return client.get(`/phones/${phoneId}/uptime${query ? `?${query}` : ''}`);
+  },
   getUsageOverview: () => client.get('/usage/overview'),
 
   // Groups

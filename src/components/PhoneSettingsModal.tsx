@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, BarChart3, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp, Activity, Database } from 'lucide-react';
+import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp, Activity, Database } from 'lucide-react';
 import { api } from '../api/client';
 import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType } from '../types';
 
@@ -8,18 +8,22 @@ type RotationMode = 'off' | 'timed' | 'api';
 interface DataUsage {
   phone_id: string;
   phone_name: string;
-  this_month: { bytes_in: number; bytes_out: number; total: number };
-  last_month: { bytes_in: number; bytes_out: number; total: number };
-  daily_usage: { date: string; bytes_in: number; bytes_out: number; total: number }[];
+  start_date: string;
+  end_date: string;
+  total: { bytes_in: number; bytes_out: number; total: number };
+  daily: { date: string; bytes_in: number; bytes_out: number; total: number }[];
 }
 
 interface UptimeData {
   phone_id: string;
   phone_name: string;
+  start_date: string;
+  end_date: string;
   last_24_hours: number;
-  last_7_days: number;
+  period_average: number;
   current_status: string;
-  daily_uptime: { date: string; online_minutes: number; uptime_percentage: number }[];
+  daily: { date: string; online_minutes: number; uptime_percentage: number }[];
+  hourly: { hour: number; uptime: number; minutes: number }[];
 }
 
 interface Props {
@@ -52,8 +56,8 @@ export default function PhoneSettingsModal({
   const [dataUsage, setDataUsage] = useState<DataUsage | null>(null);
   const [uptimeData, setUptimeData] = useState<UptimeData | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
-  const [uptimePeriod, setUptimePeriod] = useState<'24h' | '7d'>('24h');
-  const [usagePeriod, setUsagePeriod] = useState<'daily' | 'monthly'>('daily');
+  const [usageDateRange, setUsageDateRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [uptimeDateRange, setUptimeDateRange] = useState<'today' | '7d' | '30d'>('7d');
 
   // Rotation settings state
   const [rotationMode, setRotationMode] = useState<RotationMode>('off');
@@ -80,19 +84,47 @@ export default function PhoneSettingsModal({
     loadData();
   }, [phone.id]);
 
-  // Load usage data when usage tab is selected
+  // Calculate date range based on selection
+  const getDateRange = (range: string): { start: string; end: string } => {
+    const today = new Date();
+    const end = today.toISOString().split('T')[0];
+    let start = end;
+
+    if (range === '7d') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 7);
+      start = d.toISOString().split('T')[0];
+    } else if (range === '30d') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 30);
+      start = d.toISOString().split('T')[0];
+    } else if (range === '90d') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 90);
+      start = d.toISOString().split('T')[0];
+    } else if (range === 'today') {
+      start = end;
+    }
+
+    return { start, end };
+  };
+
+  // Load usage data when usage tab is selected or date range changes
   useEffect(() => {
-    if (activeTab === 'usage' && !dataUsage && !loadingUsage) {
+    if (activeTab === 'usage') {
       loadUsageData();
     }
-  }, [activeTab]);
+  }, [activeTab, usageDateRange, uptimeDateRange]);
 
   const loadUsageData = async () => {
     setLoadingUsage(true);
     try {
+      const usageRange = getDateRange(usageDateRange);
+      const uptimeRange = getDateRange(uptimeDateRange);
+
       const [usageRes, uptimeRes] = await Promise.all([
-        api.getPhoneDataUsage(phone.id),
-        api.getPhoneUptime(phone.id),
+        api.getPhoneDataUsage(phone.id, usageRange.start, usageRange.end),
+        api.getPhoneUptime(phone.id, uptimeRange.start, uptimeRange.end),
       ]);
       setDataUsage(usageRes.data);
       setUptimeData(uptimeRes.data);
@@ -863,26 +895,19 @@ export default function PhoneSettingsModal({
                             Uptime
                           </h3>
                           <div className="flex gap-1">
-                            <button
-                              onClick={() => setUptimePeriod('24h')}
-                              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                                uptimePeriod === '24h'
-                                  ? 'bg-emerald-100 text-emerald-700 font-medium'
-                                  : 'text-zinc-500 hover:bg-zinc-100'
-                              }`}
-                            >
-                              24h
-                            </button>
-                            <button
-                              onClick={() => setUptimePeriod('7d')}
-                              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                                uptimePeriod === '7d'
-                                  ? 'bg-emerald-100 text-emerald-700 font-medium'
-                                  : 'text-zinc-500 hover:bg-zinc-100'
-                              }`}
-                            >
-                              7 Days
-                            </button>
+                            {(['today', '7d', '30d'] as const).map((period) => (
+                              <button
+                                key={period}
+                                onClick={() => setUptimeDateRange(period)}
+                                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                                  uptimeDateRange === period
+                                    ? 'bg-emerald-100 text-emerald-700 font-medium'
+                                    : 'text-zinc-500 hover:bg-zinc-100'
+                                }`}
+                              >
+                                {period === 'today' ? 'Today' : period === '7d' ? '7 Days' : '30 Days'}
+                              </button>
+                            ))}
                           </div>
                         </div>
 
@@ -891,33 +916,59 @@ export default function PhoneSettingsModal({
                           <div className="flex items-center justify-between mb-3">
                             <div>
                               <p className="text-xs text-zinc-500 mb-1">
-                                {uptimePeriod === '24h' ? 'Last 24 Hours' : 'Last 7 Days'}
+                                {uptimeDateRange === 'today' ? 'Today' : uptimeDateRange === '7d' ? 'Last 7 Days' : 'Last 30 Days'}
                               </p>
                               <p className="text-3xl font-bold text-zinc-900">
                                 {uptimeData
-                                  ? `${(uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days).toFixed(1)}%`
+                                  ? `${(uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average).toFixed(1)}%`
                                   : '-'}
                               </p>
                             </div>
                             <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
                               !uptimeData ? 'bg-zinc-200' :
-                              (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 90 ? 'bg-emerald-100' :
-                              (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 50 ? 'bg-amber-100' : 'bg-red-100'
+                              (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 90 ? 'bg-emerald-100' :
+                              (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 50 ? 'bg-amber-100' : 'bg-red-100'
                             }`}>
                               <Activity className={`w-8 h-8 ${
                                 !uptimeData ? 'text-zinc-400' :
-                                (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 90 ? 'text-emerald-600' :
-                                (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 50 ? 'text-amber-600' : 'text-red-600'
+                                (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 90 ? 'text-emerald-600' :
+                                (uptimeDateRange === 'today' ? uptimeData.last_24_hours : uptimeData.period_average) >= 50 ? 'text-amber-600' : 'text-red-600'
                               }`} />
                             </div>
                           </div>
 
-                          {/* Daily uptime bars */}
-                          {uptimeData && uptimeData.daily_uptime.length > 0 && (
+                          {/* Hourly breakdown for today */}
+                          {uptimeDateRange === 'today' && uptimeData && uptimeData.hourly && uptimeData.hourly.length > 0 && (
+                            <div className="pt-3 border-t border-zinc-200">
+                              <p className="text-[10px] text-zinc-400 mb-2">Hourly breakdown</p>
+                              <div className="flex items-end gap-0.5 h-12">
+                                {uptimeData.hourly.map((h, idx) => (
+                                  <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer">
+                                    <div
+                                      className={`w-full rounded-t transition-all ${
+                                        h.uptime >= 90 ? 'bg-emerald-500' :
+                                        h.uptime >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                      }`}
+                                      style={{ height: `${Math.max(2, h.uptime * 0.48)}px` }}
+                                      title={`${h.hour}:00 - ${h.uptime.toFixed(0)}%`}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex justify-between text-[8px] text-zinc-400 mt-1">
+                                <span>00:00</span>
+                                <span>12:00</span>
+                                <span>23:00</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Daily breakdown for 7d/30d */}
+                          {uptimeDateRange !== 'today' && uptimeData && uptimeData.daily && uptimeData.daily.length > 0 && (
                             <div className="pt-3 border-t border-zinc-200">
                               <p className="text-[10px] text-zinc-400 mb-2">Daily breakdown</p>
                               <div className="flex items-end gap-1 h-12">
-                                {uptimeData.daily_uptime.slice(0, 7).reverse().map((day, idx) => (
+                                {uptimeData.daily.slice(0, uptimeDateRange === '7d' ? 7 : 30).reverse().map((day, idx) => (
                                   <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer">
                                     <div
                                       className={`w-full rounded-t transition-all ${
@@ -927,9 +978,6 @@ export default function PhoneSettingsModal({
                                       style={{ height: `${Math.max(4, day.uptime_percentage * 0.48)}px` }}
                                       title={`${day.date}: ${day.uptime_percentage.toFixed(1)}%`}
                                     />
-                                    <span className="text-[8px] text-zinc-400 mt-1 group-hover:text-zinc-600">
-                                      {formatDate(day.date).split(' ')[0]}
-                                    </span>
                                   </div>
                                 ))}
                               </div>
@@ -937,7 +985,7 @@ export default function PhoneSettingsModal({
                           )}
                         </div>
 
-                        {uptimeData && uptimeData.last_24_hours === 0 && uptimeData.last_7_days === 0 && (
+                        {uptimeData && uptimeData.last_24_hours === 0 && uptimeData.period_average === 0 && (
                           <p className="text-xs text-zinc-400 mt-2 text-center">
                             Uptime data will appear once the phone reports status changes.
                           </p>
@@ -951,30 +999,75 @@ export default function PhoneSettingsModal({
                             <Database className="w-4 h-4" />
                             Data Usage
                           </h3>
-                        </div>
-
-                        {/* Total Usage from Credentials */}
-                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 mb-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs text-emerald-600 mb-1">Total Bandwidth Used</p>
-                              <p className="text-2xl font-bold text-emerald-700">
-                                {formatBytes(credentials.reduce((sum, c) => sum + c.bandwidth_used, 0))}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-emerald-600 mb-1">Total Connections</p>
-                              <p className="text-lg font-bold text-emerald-700">
-                                {credentials.reduce((sum, c) => sum + c.connection_count, 0).toLocaleString()}
-                              </p>
-                            </div>
+                          <div className="flex gap-1">
+                            {(['7d', '30d', '90d'] as const).map((period) => (
+                              <button
+                                key={period}
+                                onClick={() => setUsageDateRange(period)}
+                                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                                  usageDateRange === period
+                                    ? 'bg-emerald-100 text-emerald-700 font-medium'
+                                    : 'text-zinc-500 hover:bg-zinc-100'
+                                }`}
+                              >
+                                {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : '90 Days'}
+                              </button>
+                            ))}
                           </div>
                         </div>
+
+                        {/* Period Total */}
+                        {dataUsage && (
+                          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 mb-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-emerald-600 mb-1">
+                                  {usageDateRange === '7d' ? 'Last 7 Days' : usageDateRange === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
+                                </p>
+                                <p className="text-2xl font-bold text-emerald-700">
+                                  {formatBytes(dataUsage.total.total)}
+                                </p>
+                              </div>
+                              <div className="text-right text-xs text-emerald-600">
+                                <div className="flex items-center gap-1 justify-end">
+                                  <ArrowDown className="w-3 h-3" />
+                                  <span>{formatBytes(dataUsage.total.bytes_in)}</span>
+                                </div>
+                                <div className="flex items-center gap-1 justify-end mt-1">
+                                  <ArrowUp className="w-3 h-3" />
+                                  <span>{formatBytes(dataUsage.total.bytes_out)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Daily Usage Chart */}
+                        {dataUsage && dataUsage.daily && dataUsage.daily.length > 0 && (
+                          <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 mb-3">
+                            <p className="text-xs font-medium text-zinc-500 mb-2">Daily Usage</p>
+                            <div className="flex items-end gap-1 h-16">
+                              {dataUsage.daily.slice(0, usageDateRange === '7d' ? 7 : usageDateRange === '30d' ? 30 : 90).reverse().map((day, idx) => {
+                                const maxTotal = Math.max(...dataUsage.daily.map(d => d.total), 1);
+                                const height = (day.total / maxTotal) * 64;
+                                return (
+                                  <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer">
+                                    <div
+                                      className="w-full bg-emerald-500 rounded-t transition-all hover:bg-emerald-600"
+                                      style={{ height: `${Math.max(2, height)}px` }}
+                                      title={`${formatDate(day.date)}: ${formatBytes(day.total)}`}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Per-Credential Breakdown */}
                         {credentials.length > 0 && (
                           <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <p className="text-xs font-medium text-zinc-500 mb-2">Per Credential</p>
+                            <p className="text-xs font-medium text-zinc-500 mb-2">Per Credential (All Time)</p>
                             <div className="space-y-2">
                               {credentials.map((cred) => (
                                 <div key={cred.id} className="flex items-center justify-between py-2 border-b border-zinc-100 last:border-0">
@@ -985,34 +1078,11 @@ export default function PhoneSettingsModal({
                                       ({cred.auth_type === 'ip' ? 'IP' : 'User/Pass'})
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-4 text-xs">
-                                    <span className="text-zinc-500">
-                                      {cred.connection_count.toLocaleString()} conn
-                                    </span>
-                                    <span className="font-medium text-zinc-700 min-w-[60px] text-right">
-                                      {formatBytes(cred.bandwidth_used)}
-                                    </span>
-                                  </div>
+                                  <span className="font-medium text-zinc-700 text-sm">
+                                    {formatBytes(cred.bandwidth_used)}
+                                  </span>
                                 </div>
                               ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Monthly Summary (from API) */}
-                        {dataUsage && (dataUsage.this_month.total > 0 || dataUsage.last_month.total > 0) && (
-                          <div className="mt-3 grid grid-cols-2 gap-3">
-                            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-                              <p className="text-[10px] text-zinc-400 mb-1">This Month</p>
-                              <p className="text-lg font-bold text-zinc-700">
-                                {formatBytes(dataUsage.this_month.total)}
-                              </p>
-                            </div>
-                            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-                              <p className="text-[10px] text-zinc-400 mb-1">Last Month</p>
-                              <p className="text-lg font-bold text-zinc-700">
-                                {formatBytes(dataUsage.last_month.total)}
-                              </p>
                             </div>
                           </div>
                         )}
