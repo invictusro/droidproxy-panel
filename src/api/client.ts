@@ -168,6 +168,22 @@ export const api = {
   updateUserRole: (id: string, role: string) =>
     client.put(`/users/${id}/role`, { role }),
   deleteUser: (id: string) => client.delete(`/users/${id}`),
+
+  // Fleet Management (admin) - OTA Updates
+  uploadHubAgentBinary: (file: File, version: string) => {
+    const formData = new FormData();
+    formData.append('binary', file);
+    formData.append('version', version);
+    return client.post('/admin/fleet/binary', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getLatestBinaryInfo: () => client.get('/admin/fleet/binary'),
+  getFleetVersions: () => client.get('/admin/fleet/versions'),
+  triggerServerUpdate: (serverId: string) =>
+    client.post(`/admin/fleet/update/${serverId}`),
+  triggerFleetUpdate: (targetVersion: string) =>
+    client.post('/admin/fleet/update', { target_version: targetVersion }),
 };
 
 export default client;

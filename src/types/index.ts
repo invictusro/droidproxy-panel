@@ -27,6 +27,8 @@ export interface Server {
   bandwidth_in?: number;
   bandwidth_out?: number;
   last_heartbeat?: string;
+  // OTA version tracking
+  current_version?: string;
 }
 
 export interface ServerTelemetry {

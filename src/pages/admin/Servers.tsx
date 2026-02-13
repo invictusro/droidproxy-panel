@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, X, Server as ServerIcon, Cpu, HardDrive, Activity, Wifi, RefreshCw, Terminal } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Server as ServerIcon, Cpu, HardDrive, Activity, Wifi, RefreshCw, Terminal, Download, Upload, ArrowUpCircle } from 'lucide-react';
 import { api } from '../../api/client';
 import type { Server, ServerTelemetry } from '../../types';
 
@@ -37,10 +37,13 @@ export default function Servers() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [showProvisionModal, setShowProvisionModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [editingServer, setEditingServer] = useState<Server | null>(null);
   const [provisioningServer, setProvisioningServer] = useState<Server | null>(null);
   const [form, setForm] = useState<ServerForm>(initialForm);
   const [telemetryData, setTelemetryData] = useState<Record<string, ServerTelemetry>>({});
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadVersion, setUploadVersion] = useState('');
 
   const { data: servers, isLoading } = useQuery({
     queryKey: ['servers'],
@@ -49,6 +52,21 @@ export default function Servers() {
       return response.data.servers as Server[];
     },
   });
+
+  // Fetch latest binary info for version comparison
+  const { data: latestBinary } = useQuery({
+    queryKey: ['latestBinary'],
+    queryFn: async () => {
+      try {
+        const response = await api.getLatestBinaryInfo();
+        return response.data as { version: string; uploaded_at: string; size: string };
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  const latestVersion = latestBinary?.version;
 
   // Fetch telemetry for all servers every 10 seconds
   useEffect(() => {
@@ -110,6 +128,34 @@ export default function Servers() {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
       setShowProvisionModal(false);
       setProvisioningServer(null);
+    },
+  });
+
+  // Upload binary mutation
+  const uploadBinaryMutation = useMutation({
+    mutationFn: ({ file, version }: { file: File; version: string }) =>
+      api.uploadHubAgentBinary(file, version),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['latestBinary'] });
+      setShowUploadModal(false);
+      setUploadFile(null);
+      setUploadVersion('');
+    },
+  });
+
+  // Single server update mutation
+  const updateServerMutation = useMutation({
+    mutationFn: (serverId: string) => api.triggerServerUpdate(serverId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['servers'] });
+    },
+  });
+
+  // Fleet update mutation
+  const fleetUpdateMutation = useMutation({
+    mutationFn: (targetVersion: string) => api.triggerFleetUpdate(targetVersion),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['servers'] });
     },
   });
 
@@ -178,6 +224,33 @@ export default function Servers() {
     }
   };
 
+  const handleUploadBinary = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile || !uploadVersion) return;
+    uploadBinaryMutation.mutate({ file: uploadFile, version: uploadVersion });
+  };
+
+  const handleUpdateServer = (serverId: string, serverName: string) => {
+    if (confirm(`Trigger OTA update for ${serverName}?`)) {
+      updateServerMutation.mutate(serverId);
+    }
+  };
+
+  const handleUpdateAll = () => {
+    if (!latestVersion) {
+      alert('No binary uploaded yet. Please upload a binary first.');
+      return;
+    }
+    const outdatedCount = servers?.filter(s => s.current_version !== latestVersion && s.has_hub_api_key).length || 0;
+    if (outdatedCount === 0) {
+      alert('All servers are already on the latest version.');
+      return;
+    }
+    if (confirm(`Update ${outdatedCount} server(s) to version ${latestVersion}?`)) {
+      fleetUpdateMutation.mutate(latestVersion);
+    }
+  };
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -197,14 +270,38 @@ export default function Servers() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Hub Servers</h1>
-        <button
-          onClick={openAddModal}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Server
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Hub Servers</h1>
+          {latestVersion && (
+            <p className="text-sm text-gray-500 mt-1">
+              Latest version: <span className="font-mono font-medium text-gray-700">{latestVersion}</span>
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center px-3 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload Binary
+          </button>
+          <button
+            onClick={handleUpdateAll}
+            disabled={fleetUpdateMutation.isPending || !latestVersion}
+            className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+          >
+            <ArrowUpCircle className="w-4 h-4 mr-2" />
+            {fleetUpdateMutation.isPending ? 'Updating...' : 'Update All'}
+          </button>
+          <button
+            onClick={openAddModal}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Server
+          </button>
+        </div>
       </div>
 
       {/* Server Cards Grid */}
@@ -315,6 +412,29 @@ export default function Servers() {
                   <span>Ports: {server.proxy_port_start}-{server.proxy_port_end}</span>
                 </div>
 
+                {/* Version */}
+                {server.has_hub_api_key && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Version</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono ${
+                        server.current_version === latestVersion
+                          ? 'text-green-600'
+                          : server.current_version === 'unknown' || !server.current_version
+                            ? 'text-gray-400'
+                            : 'text-yellow-600'
+                      }`}>
+                        {server.current_version || 'unknown'}
+                      </span>
+                      {latestVersion && server.current_version !== latestVersion && server.current_version !== 'unknown' && (
+                        <span className="text-xs text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">
+                          outdated
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Hub Agent Status */}
                 {!server.has_hub_api_key && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
@@ -340,6 +460,17 @@ export default function Servers() {
                       title="Install Hub Agent"
                     >
                       <Terminal className="w-4 h-4" />
+                    </button>
+                  )}
+                  {/* OTA Update button - show if outdated */}
+                  {server.has_hub_api_key && latestVersion && server.current_version !== latestVersion && (
+                    <button
+                      onClick={() => handleUpdateServer(server.id, server.name)}
+                      disabled={updateServerMutation.isPending}
+                      className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                      title={`Update to ${latestVersion}`}
+                    >
+                      <Download className="w-4 h-4" />
                     </button>
                   )}
                   <button
@@ -560,6 +691,70 @@ export default function Servers() {
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                 >
                   {provisionMutation.isPending ? 'Installing...' : 'Install Hub Agent'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Binary Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Upload Hub Agent Binary</h2>
+              <button onClick={() => { setShowUploadModal(false); setUploadFile(null); setUploadVersion(''); }} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Upload a new hub-agent binary for OTA updates. Build with version embedded:
+            </p>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 text-xs font-mono text-gray-600">
+              go build -ldflags="-X 'main.Version=1.0.0'" -o hub-agent ./cmd/main.go
+            </div>
+
+            <form onSubmit={handleUploadBinary}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Binary File</label>
+                  <input
+                    type="file"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
+                  <input
+                    type="text"
+                    value={uploadVersion}
+                    onChange={(e) => setUploadVersion(e.target.value)}
+                    placeholder="e.g., 1.0.1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => { setShowUploadModal(false); setUploadFile(null); setUploadVersion(''); }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadBinaryMutation.isPending || !uploadFile || !uploadVersion}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {uploadBinaryMutation.isPending ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
             </form>
