@@ -86,11 +86,9 @@ export default function PhoneSettingsModal({
   // Access Logs state
   const [domainStats, setDomainStats] = useState<DomainStats[]>([]);
   const [loadingDomainStats, setLoadingDomainStats] = useState(false);
-  const [logRetentionWeeks, setLogRetentionWeeks] = useState(12);
-  const [savingRetention, setSavingRetention] = useState(false);
   const [exportingLogs, setExportingLogs] = useState(false);
   const [totalLogs, setTotalLogs] = useState(0);
-  // Date range for export - default 7 days
+  // Date range for export - default 7 days, max 12 weeks back
   const [exportStartDate, setExportStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -142,7 +140,6 @@ export default function PhoneSettingsModal({
   useEffect(() => {
     if (activeTab === 'access-logs') {
       loadDomainStats();
-      loadLogRetention();
     }
   }, [activeTab]);
 
@@ -244,31 +241,11 @@ export default function PhoneSettingsModal({
     setExportingLogs(false);
   };
 
-  // Get the earliest allowed date based on retention
+  // Get the earliest allowed date (12 weeks back - max retention)
   const getMinExportDate = () => {
     const d = new Date();
-    d.setDate(d.getDate() - (logRetentionWeeks * 7));
+    d.setDate(d.getDate() - (12 * 7)); // 12 weeks max
     return d.toISOString().split('T')[0];
-  };
-
-  const loadLogRetention = async () => {
-    try {
-      const res = await api.getPhoneLogRetention(phone.id);
-      setLogRetentionWeeks(res.data.log_retention_weeks || 12);
-    } catch (error) {
-      console.error('Failed to load log retention:', error);
-    }
-  };
-
-  const saveLogRetention = async (weeks: number) => {
-    setSavingRetention(true);
-    try {
-      await api.updatePhoneLogRetention(phone.id, weeks);
-      setLogRetentionWeeks(weeks);
-    } catch (error) {
-      console.error('Failed to save log retention:', error);
-    }
-    setSavingRetention(false);
   };
 
   // Load hourly data for a specific day (drill-down)
@@ -1390,9 +1367,6 @@ export default function PhoneSettingsModal({
                         )}
                       </button>
                     </div>
-                    <p className="text-xs text-zinc-400 mt-2">
-                      Logs are retained for {logRetentionWeeks} {logRetentionWeeks === 1 ? 'week' : 'weeks'}
-                    </p>
                   </div>
 
                   {/* Top Domains */}
@@ -1445,33 +1419,6 @@ export default function PhoneSettingsModal({
                         ))}
                       </div>
                     )}
-                  </div>
-
-                  {/* Log Retention Settings */}
-                  <div className="pt-4 border-t border-zinc-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-zinc-700">Log Retention</h4>
-                        <p className="text-xs text-zinc-500">Logs older than this will be automatically deleted</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={logRetentionWeeks}
-                          onChange={(e) => saveLogRetention(parseInt(e.target.value))}
-                          disabled={savingRetention}
-                          className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 disabled:opacity-50"
-                        >
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((weeks) => (
-                            <option key={weeks} value={weeks}>
-                              {weeks} {weeks === 1 ? 'week' : 'weeks'}
-                            </option>
-                          ))}
-                        </select>
-                        {savingRetention && (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
