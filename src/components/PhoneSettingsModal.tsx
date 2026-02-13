@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, BarChart3, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, BarChart3, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp, Activity, Database } from 'lucide-react';
 import { api } from '../api/client';
 import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType } from '../types';
 
@@ -28,7 +28,6 @@ interface Props {
   onRotateIP: () => void;
   onRestart: () => void;
   onDelete: () => void;
-  onPhoneUpdate?: (updates: Partial<PhoneWithStatus>) => void;
   isRotating: boolean;
   isRestarting: boolean;
 }
@@ -39,7 +38,6 @@ export default function PhoneSettingsModal({
   onRotateIP,
   onRestart,
   onDelete,
-  onPhoneUpdate,
   isRotating,
   isRestarting
 }: Props) {
@@ -54,6 +52,8 @@ export default function PhoneSettingsModal({
   const [dataUsage, setDataUsage] = useState<DataUsage | null>(null);
   const [uptimeData, setUptimeData] = useState<UptimeData | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
+  const [uptimePeriod, setUptimePeriod] = useState<'24h' | '7d'>('24h');
+  const [usagePeriod, setUsagePeriod] = useState<'daily' | 'monthly'>('daily');
 
   // Rotation settings state
   const [rotationMode, setRotationMode] = useState<RotationMode>('off');
@@ -148,14 +148,7 @@ export default function PhoneSettingsModal({
         data.username = formData.username;
         data.password = formData.password;
       }
-      const response = await api.createCredential(phone.id, data);
-      // Update phone ports if they were just assigned
-      if (response.data.proxy_port && onPhoneUpdate) {
-        onPhoneUpdate({
-          proxy_port: response.data.proxy_port,
-          http_port: response.data.http_port,
-        });
-      }
+      await api.createCredential(phone.id, data);
       setShowAddForm(false);
       setFormData({ name: '', auth_type: 'ip', proxy_type: 'socks5', allowed_ip: '', username: '', password: '' });
       loadData();
@@ -268,39 +261,39 @@ export default function PhoneSettingsModal({
   };
 
   // Generate connection strings for a credential
+  // Each credential has its own port
   const getConnectionStrings = (cred: ConnectionCredential) => {
     // Use credential's DNS domain (per-credential DNS), fallback to hub server IP
     const serverHost = cred.proxy_domain || phone.hub_server_ip;
-    const socks5Port = phone.proxy_port || 1080;
-    const httpPort = phone.http_port || 0; // HTTP port is now separate
+    const proxyPort = cred.port;
 
     const strings: { type: string; value: string }[] = [];
 
     if (cred.auth_type === 'userpass') {
-      if (cred.proxy_type === 'socks5' || cred.proxy_type === 'both') {
+      if (cred.proxy_type === 'socks5') {
         strings.push({
           type: 'SOCKS5',
-          value: `socks5://${cred.username}:${cred.password}@${serverHost}:${socks5Port}`
+          value: `socks5://${cred.username}:${cred.password}@${serverHost}:${proxyPort}`
         });
       }
-      if ((cred.proxy_type === 'http' || cred.proxy_type === 'both') && httpPort > 0) {
+      if (cred.proxy_type === 'http') {
         strings.push({
           type: 'HTTP',
-          value: `http://${cred.username}:${cred.password}@${serverHost}:${httpPort}`
+          value: `http://${cred.username}:${cred.password}@${serverHost}:${proxyPort}`
         });
       }
     } else {
       // IP whitelist - no auth in connection string
-      if (cred.proxy_type === 'socks5' || cred.proxy_type === 'both') {
+      if (cred.proxy_type === 'socks5') {
         strings.push({
           type: 'SOCKS5',
-          value: `socks5://${serverHost}:${socks5Port}`
+          value: `socks5://${serverHost}:${proxyPort}`
         });
       }
-      if ((cred.proxy_type === 'http' || cred.proxy_type === 'both') && httpPort > 0) {
+      if (cred.proxy_type === 'http') {
         strings.push({
           type: 'HTTP',
-          value: `http://${serverHost}:${httpPort}`
+          value: `http://${serverHost}:${proxyPort}`
         });
       }
     }
@@ -316,8 +309,7 @@ export default function PhoneSettingsModal({
           <div>
             <h2 className="text-xl font-semibold text-zinc-900">{phone.name}</h2>
             <p className="text-sm text-zinc-500">
-              {phone.hub_server?.location} - SOCKS5:{phone.proxy_port}
-              {phone.http_port ? ` / HTTP:${phone.http_port}` : ''}
+              {phone.hub_server?.location}
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
@@ -537,16 +529,6 @@ export default function PhoneSettingsModal({
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
-                          </div>
-                          {/* Usage stats */}
-                          <div className="flex items-center gap-4 mb-2 text-xs text-zinc-500">
-                            <span title="Bandwidth used">
-                              📊 {formatBytes(cred.bandwidth_used)}
-                              {cred.bandwidth_limit ? ` / ${formatBytes(cred.bandwidth_limit)}` : ''}
-                            </span>
-                            <span title="Total connections">
-                              🔗 {cred.connection_count.toLocaleString()} connections
-                            </span>
                           </div>
                           {/* Connection Strings */}
                           <div className="space-y-1.5">
@@ -875,94 +857,141 @@ export default function PhoneSettingsModal({
                     <div className="space-y-6">
                       {/* Uptime Section */}
                       <div>
-                        <h3 className="text-sm font-semibold text-zinc-700 mb-3 flex items-center gap-2">
-                          <BarChart3 className="w-4 h-4" />
-                          Uptime
-                        </h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <p className="text-xs text-zinc-500 mb-1">Last 24 Hours</p>
-                            <p className="text-2xl font-bold text-zinc-900">
-                              {uptimeData ? `${uptimeData.last_24_hours.toFixed(1)}%` : '-'}
-                            </p>
-                          </div>
-                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <p className="text-xs text-zinc-500 mb-1">Last 7 Days</p>
-                            <p className="text-2xl font-bold text-zinc-900">
-                              {uptimeData ? `${uptimeData.last_7_days.toFixed(1)}%` : '-'}
-                            </p>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+                            <Activity className="w-4 h-4" />
+                            Uptime
+                          </h3>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => setUptimePeriod('24h')}
+                              className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                                uptimePeriod === '24h'
+                                  ? 'bg-emerald-100 text-emerald-700 font-medium'
+                                  : 'text-zinc-500 hover:bg-zinc-100'
+                              }`}
+                            >
+                              24h
+                            </button>
+                            <button
+                              onClick={() => setUptimePeriod('7d')}
+                              className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                                uptimePeriod === '7d'
+                                  ? 'bg-emerald-100 text-emerald-700 font-medium'
+                                  : 'text-zinc-500 hover:bg-zinc-100'
+                              }`}
+                            >
+                              7 Days
+                            </button>
                           </div>
                         </div>
-                        {/* Daily uptime bars */}
-                        {uptimeData && uptimeData.daily_uptime.length > 0 && (
-                          <div className="mt-3 p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <div className="flex items-end gap-1 h-16">
-                              {uptimeData.daily_uptime.slice(0, 7).reverse().map((day, idx) => (
-                                <div key={idx} className="flex-1 flex flex-col items-center">
-                                  <div
-                                    className={`w-full rounded-t transition-all ${
-                                      day.uptime_percentage >= 90 ? 'bg-emerald-500' :
-                                      day.uptime_percentage >= 50 ? 'bg-amber-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ height: `${Math.max(4, day.uptime_percentage * 0.6)}px` }}
-                                    title={`${day.date}: ${day.uptime_percentage.toFixed(1)}%`}
-                                  />
-                                  <span className="text-[9px] text-zinc-400 mt-1">{formatDate(day.date)}</span>
-                                </div>
-                              ))}
+
+                        {/* Uptime display */}
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <p className="text-xs text-zinc-500 mb-1">
+                                {uptimePeriod === '24h' ? 'Last 24 Hours' : 'Last 7 Days'}
+                              </p>
+                              <p className="text-3xl font-bold text-zinc-900">
+                                {uptimeData
+                                  ? `${(uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days).toFixed(1)}%`
+                                  : '-'}
+                              </p>
+                            </div>
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                              !uptimeData ? 'bg-zinc-200' :
+                              (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 90 ? 'bg-emerald-100' :
+                              (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 50 ? 'bg-amber-100' : 'bg-red-100'
+                            }`}>
+                              <Activity className={`w-8 h-8 ${
+                                !uptimeData ? 'text-zinc-400' :
+                                (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 90 ? 'text-emerald-600' :
+                                (uptimePeriod === '24h' ? uptimeData.last_24_hours : uptimeData.last_7_days) >= 50 ? 'text-amber-600' : 'text-red-600'
+                              }`} />
                             </div>
                           </div>
+
+                          {/* Daily uptime bars */}
+                          {uptimeData && uptimeData.daily_uptime.length > 0 && (
+                            <div className="pt-3 border-t border-zinc-200">
+                              <p className="text-[10px] text-zinc-400 mb-2">Daily breakdown</p>
+                              <div className="flex items-end gap-1 h-12">
+                                {uptimeData.daily_uptime.slice(0, 7).reverse().map((day, idx) => (
+                                  <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer">
+                                    <div
+                                      className={`w-full rounded-t transition-all ${
+                                        day.uptime_percentage >= 90 ? 'bg-emerald-500' :
+                                        day.uptime_percentage >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                      }`}
+                                      style={{ height: `${Math.max(4, day.uptime_percentage * 0.48)}px` }}
+                                      title={`${day.date}: ${day.uptime_percentage.toFixed(1)}%`}
+                                    />
+                                    <span className="text-[8px] text-zinc-400 mt-1 group-hover:text-zinc-600">
+                                      {formatDate(day.date).split(' ')[0]}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {uptimeData && uptimeData.last_24_hours === 0 && uptimeData.last_7_days === 0 && (
+                          <p className="text-xs text-zinc-400 mt-2 text-center">
+                            Uptime data will appear once the phone reports status changes.
+                          </p>
                         )}
                       </div>
 
                       {/* Data Usage Section */}
                       <div>
-                        <h3 className="text-sm font-semibold text-zinc-700 mb-3 flex items-center gap-2">
-                          <ArrowUp className="w-4 h-4" />
-                          <ArrowDown className="w-4 h-4 -ml-2" />
-                          Data Usage
-                        </h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <p className="text-xs text-zinc-500 mb-1">This Month</p>
-                            <p className="text-2xl font-bold text-zinc-900">
-                              {dataUsage ? formatBytes(dataUsage.this_month.total) : '-'}
-                            </p>
-                            {dataUsage && dataUsage.this_month.total > 0 && (
-                              <p className="text-xs text-zinc-400 mt-1">
-                                <span className="text-emerald-600">{formatBytes(dataUsage.this_month.bytes_in)}</span>
-                                {' / '}
-                                <span className="text-blue-600">{formatBytes(dataUsage.this_month.bytes_out)}</span>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
+                            <Database className="w-4 h-4" />
+                            Data Usage
+                          </h3>
+                        </div>
+
+                        {/* Total Usage from Credentials */}
+                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 mb-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-emerald-600 mb-1">Total Bandwidth Used</p>
+                              <p className="text-2xl font-bold text-emerald-700">
+                                {formatBytes(credentials.reduce((sum, c) => sum + c.bandwidth_used, 0))}
                               </p>
-                            )}
-                          </div>
-                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <p className="text-xs text-zinc-500 mb-1">Last Month</p>
-                            <p className="text-2xl font-bold text-zinc-900">
-                              {dataUsage ? formatBytes(dataUsage.last_month.total) : '-'}
-                            </p>
-                            {dataUsage && dataUsage.last_month.total > 0 && (
-                              <p className="text-xs text-zinc-400 mt-1">
-                                <span className="text-emerald-600">{formatBytes(dataUsage.last_month.bytes_in)}</span>
-                                {' / '}
-                                <span className="text-blue-600">{formatBytes(dataUsage.last_month.bytes_out)}</span>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-emerald-600 mb-1">Total Connections</p>
+                              <p className="text-lg font-bold text-emerald-700">
+                                {credentials.reduce((sum, c) => sum + c.connection_count, 0).toLocaleString()}
                               </p>
-                            )}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Daily usage list */}
-                        {dataUsage && dataUsage.daily_usage.length > 0 && (
-                          <div className="mt-3 p-3 bg-zinc-50 rounded-xl border border-zinc-200 max-h-48 overflow-y-auto">
-                            <p className="text-xs font-medium text-zinc-500 mb-2">Daily Breakdown (Last 30 Days)</p>
-                            <div className="space-y-1.5">
-                              {dataUsage.daily_usage.slice(0, 14).map((day, idx) => (
-                                <div key={idx} className="flex items-center justify-between text-xs">
-                                  <span className="text-zinc-500">{formatDate(day.date)}</span>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-emerald-600">{formatBytes(day.bytes_in)}</span>
-                                    <span className="text-blue-600">{formatBytes(day.bytes_out)}</span>
-                                    <span className="font-medium text-zinc-700 w-16 text-right">{formatBytes(day.total)}</span>
+                        {/* Per-Credential Breakdown */}
+                        {credentials.length > 0 && (
+                          <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                            <p className="text-xs font-medium text-zinc-500 mb-2">Per Credential</p>
+                            <div className="space-y-2">
+                              {credentials.map((cred) => (
+                                <div key={cred.id} className="flex items-center justify-between py-2 border-b border-zinc-100 last:border-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${cred.is_active ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                                    <span className="text-sm font-medium text-zinc-700">{cred.name}</span>
+                                    <span className="text-[10px] text-zinc-400">
+                                      ({cred.auth_type === 'ip' ? 'IP' : 'User/Pass'})
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-xs">
+                                    <span className="text-zinc-500">
+                                      {cred.connection_count.toLocaleString()} conn
+                                    </span>
+                                    <span className="font-medium text-zinc-700 min-w-[60px] text-right">
+                                      {formatBytes(cred.bandwidth_used)}
+                                    </span>
                                   </div>
                                 </div>
                               ))}
@@ -970,10 +999,28 @@ export default function PhoneSettingsModal({
                           </div>
                         )}
 
-                        {(!dataUsage || (dataUsage.this_month.total === 0 && dataUsage.daily_usage.length === 0)) && (
-                          <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        {/* Monthly Summary (from API) */}
+                        {dataUsage && (dataUsage.this_month.total > 0 || dataUsage.last_month.total > 0) && (
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                              <p className="text-[10px] text-zinc-400 mb-1">This Month</p>
+                              <p className="text-lg font-bold text-zinc-700">
+                                {formatBytes(dataUsage.this_month.total)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                              <p className="text-[10px] text-zinc-400 mb-1">Last Month</p>
+                              <p className="text-lg font-bold text-zinc-700">
+                                {formatBytes(dataUsage.last_month.total)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {credentials.length === 0 && (
+                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                             <p className="text-sm text-amber-800">
-                              No usage data available yet. Data will appear once the phone starts reporting usage.
+                              No credentials configured. Add credentials to start tracking usage.
                             </p>
                           </div>
                         )}

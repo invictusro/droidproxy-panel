@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,10 +62,10 @@ export default function Login() {
 
       <Card className="w-full max-w-md bg-white border border-zinc-200 shadow-2xl shadow-zinc-200/50 rounded-2xl relative">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-emerald-500/25 mb-4">
-            <Zap className="w-7 h-7 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-primary">DroidProxy</CardTitle>
+          <CardTitle className="text-3xl font-bold">
+            <span className="text-primary">Droid</span>
+            <span className="text-zinc-900">Proxy</span>
+          </CardTitle>
           <CardDescription className="text-muted-foreground">
             Mobile Proxy Dashboard
           </CardDescription>

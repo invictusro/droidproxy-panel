@@ -105,13 +105,15 @@ export default function Phones() {
     fetchGroups();
   }, []);
 
-  // Generate connection string for a phone
+  // Generate connection string for a phone (using first credential)
   const getConnectionString = (phone: Phone): string | null => {
     if (!phone.first_credential || !phone.hub_server_ip) return null;
 
     const cred = phone.first_credential;
     const serverIp = phone.hub_server_ip;
-    const port = phone.proxy_port || 1080;
+    const port = cred.port || 0;
+
+    if (!port) return null;
 
     if (cred.auth_type === 'userpass' && cred.username) {
       return `socks5://${cred.username}:PASSWORD@${serverIp}:${port}`;
@@ -169,6 +171,9 @@ export default function Phones() {
       // Get SIM info from Centrifugo status (real-time) or fallback to API data (stored)
       const sim_country = liveStatus?.sim_country || phone.sim_country;
       const sim_carrier = liveStatus?.sim_carrier || phone.sim_carrier;
+      // Get connection counts from Centrifugo (real-time)
+      const active_connections = liveStatus?.active_connections;
+      const total_connections = liveStatus?.total_connections;
       return {
         ...phone,
         status,
@@ -176,6 +181,8 @@ export default function Phones() {
         rotation_capability,
         sim_country,
         sim_carrier,
+        active_connections,
+        total_connections,
       } as PhoneWithStatus;
     });
   }, [phones, statuses]);
@@ -717,7 +724,8 @@ export default function Phones() {
                     <TableHead className="font-semibold text-foreground">Status</TableHead>
                     <TableHead className="font-semibold text-foreground">Server</TableHead>
                     <TableHead className="font-semibold text-foreground">SIM</TableHead>
-                    <TableHead className="font-semibold text-foreground">Connection</TableHead>
+                    <TableHead className="font-semibold text-foreground">Connections</TableHead>
+                    <TableHead className="font-semibold text-foreground">Proxy</TableHead>
                     <TableHead className="font-semibold text-foreground">Last Seen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -797,6 +805,18 @@ export default function Phones() {
                             </span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {phone.status === 'online' ? (
+                            <span className="text-sm font-medium">
+                              <span className={phone.active_connections && phone.active_connections > 0 ? 'text-emerald-600' : 'text-zinc-600'}>
+                                {phone.active_connections ?? 0}
+                              </span>
+                              <span className="text-zinc-400">/10</span>
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400 text-sm">-</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -924,7 +944,6 @@ export default function Phones() {
           onRotateIP={() => handleRotateIP(selectedPhone.id)}
           onRestart={() => handleRestart(selectedPhone.id)}
           onDelete={() => handleDelete(selectedPhone.id)}
-          onPhoneUpdate={(updates) => setSelectedPhone({ ...selectedPhone, ...updates })}
           isRotating={rotatingIds.has(selectedPhone.id)}
           isRestarting={restartingIds.has(selectedPhone.id)}
         />

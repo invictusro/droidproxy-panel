@@ -47,6 +47,7 @@ export interface CredentialSummary {
   proxy_type: ProxyType;
   username?: string;
   allowed_ip?: string;
+  port?: number;
 }
 
 // Phone data from API (without real-time status)
@@ -54,8 +55,6 @@ export interface Phone {
   id: string;
   name: string;
   paired_at?: string;
-  proxy_port?: number;   // SOCKS5 port
-  http_port?: number;    // HTTP proxy port
   hub_server_ip?: string;
   proxy_domain?: string; // DNS domain for proxy (e.g., "abc123def.cn.yalx.in")
   hub_server?: Server;
@@ -73,6 +72,8 @@ export interface PhoneWithStatus extends Phone {
   status: PhoneStatus;
   last_seen?: string;
   rotation_capability?: string; // e.g., "IP rotation available (Digital Assistant)" or "not available"
+  active_connections?: number;
+  total_connections?: number;
 }
 
 export interface PhoneWithPairing {
@@ -108,6 +109,7 @@ export interface ConnectionCredential {
   expires_at?: string;
   proxy_domain?: string; // DNS domain for this credential (e.g., "abc123.cn.yalx.in")
   blocked_domains?: string[]; // Domain blocking patterns (e.g., "*.example.com", "example.com:443")
+  port: number; // Each credential has its own port
   is_active: boolean;
   last_used?: string;
   created_at: string;

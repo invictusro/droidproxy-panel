@@ -50,14 +50,14 @@ export const api = {
   getPhones: () => client.get('/phones'),
   createPhone: (data: { name: string; hub_server_id: string }) =>
     client.post('/phones', data),
-  getPhone: (id: string) => client.get(`/api/phones/${id}`),
-  deletePhone: (id: string) => client.delete(`/api/phones/${id}`),
-  rotateIP: (id: string) => client.post(`/api/phones/${id}/rotate-ip`),
-  restartProxy: (id: string) => client.post(`/api/phones/${id}/restart`),
-  getPhoneStats: (id: string) => client.get(`/api/phones/${id}/stats`),
+  getPhone: (id: string) => client.get(`/phones/${id}`),
+  deletePhone: (id: string) => client.delete(`/phones/${id}`),
+  rotateIP: (id: string) => client.post(`/phones/${id}/rotate-ip`),
+  restartProxy: (id: string) => client.post(`/phones/${id}/restart`),
+  getPhoneStats: (id: string) => client.get(`/phones/${id}/stats`),
 
   // Connection Credentials
-  getCredentials: (phoneId: string) => client.get(`/api/phones/${phoneId}/credentials`),
+  getCredentials: (phoneId: string) => client.get(`/phones/${phoneId}/credentials`),
   createCredential: (phoneId: string, data: {
     name: string;
     auth_type: 'ip' | 'userpass';
@@ -67,41 +67,41 @@ export const api = {
     password?: string;
     bandwidth_limit?: number;
     expires_at?: string;
-  }) => client.post(`/api/phones/${phoneId}/credentials`, data),
+  }) => client.post(`/phones/${phoneId}/credentials`, data),
   updateCredential: (phoneId: string, credId: string, data: any) =>
-    client.patch(`/api/phones/${phoneId}/credentials/${credId}`, data),
+    client.patch(`/phones/${phoneId}/credentials/${credId}`, data),
   deleteCredential: (phoneId: string, credId: string) =>
-    client.delete(`/api/phones/${phoneId}/credentials/${credId}`),
+    client.delete(`/phones/${phoneId}/credentials/${credId}`),
 
   // Rotation Token
-  getRotationToken: (phoneId: string) => client.get(`/api/phones/${phoneId}/rotation-token`),
+  getRotationToken: (phoneId: string) => client.get(`/phones/${phoneId}/rotation-token`),
   regenerateRotationToken: (phoneId: string) =>
-    client.post(`/api/phones/${phoneId}/rotation-token/regenerate`),
+    client.post(`/phones/${phoneId}/rotation-token/regenerate`),
 
   // Rotation Settings
-  getRotationSettings: (phoneId: string) => client.get(`/api/phones/${phoneId}/rotation-settings`),
+  getRotationSettings: (phoneId: string) => client.get(`/phones/${phoneId}/rotation-settings`),
   updateRotationSettings: (phoneId: string, data: {
     rotation_mode: 'off' | 'timed' | 'api';
     rotation_interval_minutes?: number;
-  }) => client.put(`/api/phones/${phoneId}/rotation-settings`, data),
+  }) => client.put(`/phones/${phoneId}/rotation-settings`, data),
 
   // Usage & Uptime
-  getPhoneDataUsage: (phoneId: string) => client.get(`/api/phones/${phoneId}/data-usage`),
-  getPhoneUptime: (phoneId: string) => client.get(`/api/phones/${phoneId}/uptime`),
+  getPhoneDataUsage: (phoneId: string) => client.get(`/phones/${phoneId}/data-usage`),
+  getPhoneUptime: (phoneId: string) => client.get(`/phones/${phoneId}/uptime`),
   getUsageOverview: () => client.get('/usage/overview'),
 
   // Groups
   getGroups: () => client.get('/groups'),
   createGroup: (data: { name: string; color?: string; description?: string; phone_ids?: string[] }) =>
     client.post('/groups', data),
-  getGroup: (id: string) => client.get(`/api/groups/${id}`),
+  getGroup: (id: string) => client.get(`/groups/${id}`),
   updateGroup: (id: string, data: { name?: string; color?: string; description?: string }) =>
-    client.put(`/api/groups/${id}`, data),
-  deleteGroup: (id: string) => client.delete(`/api/groups/${id}`),
+    client.put(`/groups/${id}`, data),
+  deleteGroup: (id: string) => client.delete(`/groups/${id}`),
   addPhonesToGroup: (groupId: string, phoneIds: string[]) =>
-    client.post(`/api/groups/${groupId}/phones`, { phone_ids: phoneIds }),
+    client.post(`/groups/${groupId}/phones`, { phone_ids: phoneIds }),
   removePhoneFromGroup: (groupId: string, phoneId: string) =>
-    client.delete(`/api/groups/${groupId}/phones/${phoneId}`),
+    client.delete(`/groups/${groupId}/phones/${phoneId}`),
 
   // Mass Actions
   massRotateIP: (phoneIds: string[]) =>
@@ -140,22 +140,22 @@ export const api = {
   // Servers
   getServers: () => client.get('/servers'),
   createServer: (data: any) => client.post('/servers', data),
-  updateServer: (id: string, data: any) => client.put(`/api/servers/${id}`, data),
-  deleteServer: (id: string) => client.delete(`/api/servers/${id}`),
-  getServerTelemetry: (id: string) => client.get(`/api/servers/${id}/telemetry`),
+  updateServer: (id: string, data: any) => client.put(`/servers/${id}`, data),
+  deleteServer: (id: string) => client.delete(`/servers/${id}`),
+  getServerTelemetry: (id: string) => client.get(`/servers/${id}/telemetry`),
   provisionServer: (id: string, data: {
     ssh_host?: string;
     ssh_port?: number;
     ssh_user?: string;
     ssh_password?: string;
     hub_binary_url?: string;
-  }) => client.post(`/api/servers/${id}/provision`, data),
+  }) => client.post(`/servers/${id}/provision`, data),
 
   // Users (admin)
   getUsers: () => client.get('/users'),
   updateUserRole: (id: string, role: string) =>
-    client.put(`/api/users/${id}/role`, { role }),
-  deleteUser: (id: string) => client.delete(`/api/users/${id}`),
+    client.put(`/users/${id}/role`, { role }),
+  deleteUser: (id: string) => client.delete(`/users/${id}`),
 };
 
 export default client;
