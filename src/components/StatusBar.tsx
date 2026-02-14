@@ -9,11 +9,6 @@ interface StatusBarProps {
   centrifugoUrl: string | null;
 }
 
-interface PhoneStats {
-  online: number;
-  total: number;
-  expired: number;
-}
 
 interface UpcomingCharge {
   phoneId: string;

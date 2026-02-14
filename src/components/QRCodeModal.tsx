@@ -149,47 +149,79 @@ export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }:
           ) : (
             /* QR Code Step */
             <div className="space-y-4">
-              {/* QR Code */}
-              <div className="flex justify-center">
-                <div className="p-3 bg-white rounded-xl shadow-inner border">
-                  <QRCode
-                    value={qrData}
-                    size={200}
-                    qrStyle="squares"
-                    eyeRadius={5}
-                  />
-                </div>
-              </div>
-
-              {/* PIN Display */}
-              {pin && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                  <div className="flex items-center justify-center gap-2 text-emerald-700 mb-2">
-                    <KeyRound className="w-4 h-4" />
-                    <span className="text-sm font-medium">Pairing PIN</span>
+              {/* Two login options side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Option 1: QR Code */}
+                <div className="border-2 border-emerald-200 bg-emerald-50/50 rounded-xl p-4">
+                  <div className="text-center mb-3">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
+                      Option 1
+                    </span>
+                    <h3 className="font-semibold text-gray-900 mt-2">Scan QR Code</h3>
                   </div>
-                  <div className="text-4xl font-mono font-bold tracking-[0.5em] text-emerald-900 text-center">
-                    {pin}
+
+                  <div className="flex justify-center mb-3">
+                    <div className="p-2 bg-white rounded-lg shadow-inner border">
+                      <QRCode
+                        value={qrData}
+                        size={140}
+                        qrStyle="squares"
+                        eyeRadius={4}
+                      />
+                    </div>
                   </div>
+
+                  {pin && (
+                    <div className="bg-white border border-emerald-200 rounded-lg p-2 text-center">
+                      <div className="flex items-center justify-center gap-1 text-emerald-700 mb-1">
+                        <KeyRound className="w-3 h-3" />
+                        <span className="text-xs font-medium">PIN</span>
+                      </div>
+                      <div className="text-2xl font-mono font-bold tracking-[0.3em] text-emerald-900">
+                        {pin}
+                      </div>
+                    </div>
+                  )}
+
+                  <ol className="text-xs text-gray-600 space-y-1 mt-3">
+                    <li>1. Open app → Scan QR</li>
+                    <li>2. Point at code above</li>
+                    {pin && <li>3. Enter the PIN</li>}
+                  </ol>
                 </div>
-              )}
 
-              {/* Alternative login option */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-blue-800 mb-1">Or login with your account</p>
-                <p className="text-sm text-blue-600">
-                  You can also sign in to the app using your panel email and password instead of scanning the QR code.
-                </p>
-              </div>
+                {/* Option 2: Username/Password */}
+                <div className="border-2 border-blue-200 bg-blue-50/50 rounded-xl p-4">
+                  <div className="text-center mb-3">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                      Option 2
+                    </span>
+                    <h3 className="font-semibold text-gray-900 mt-2">Login with Account</h3>
+                  </div>
 
-              {/* Instructions */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">To pair your phone:</p>
-                <ol className="text-sm text-gray-600 space-y-1">
-                  <li>1. Open DroidProxy app on your phone</li>
-                  <li>2. Tap "Scan QR Code" and scan the code above</li>
-                  {pin && <li>3. Enter the PIN when prompted</li>}
-                </ol>
+                  <div className="flex justify-center mb-3">
+                    <div className="w-[156px] h-[156px] bg-white rounded-lg border border-blue-200 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-blue-100 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <p className="text-xs text-blue-600 font-medium">Use your panel<br/>credentials</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-blue-200 rounded-lg p-2 text-center">
+                    <p className="text-xs text-gray-600">Same email & password<br/>as this dashboard</p>
+                  </div>
+
+                  <ol className="text-xs text-gray-600 space-y-1 mt-3">
+                    <li>1. Open app → Login</li>
+                    <li>2. Enter your email</li>
+                    <li>3. Enter your password</li>
+                  </ol>
+                </div>
               </div>
 
               {/* Back link */}

@@ -80,6 +80,7 @@ export interface Phone {
   speed_limit_mbps?: number;
   max_connections?: number;
   has_active_license?: boolean;
+  active_connections?: number; // Current active proxy connections (from hub reports)
 
   // Domain blocking (phone level)
   blocked_domains?: string[];
