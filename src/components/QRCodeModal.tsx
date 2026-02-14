@@ -174,6 +174,14 @@ export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }:
                 </div>
               )}
 
+              {/* Alternative login option */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-blue-800 mb-1">Or login with your account</p>
+                <p className="text-sm text-blue-600">
+                  You can also sign in to the app using your panel email and password instead of scanning the QR code.
+                </p>
+              </div>
+
               {/* Instructions */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm font-medium text-gray-700 mb-2">To pair your phone:</p>
@@ -182,14 +190,6 @@ export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }:
                   <li>2. Tap "Scan QR Code" and scan the code above</li>
                   {pin && <li>3. Enter the PIN when prompted</li>}
                 </ol>
-              </div>
-
-              {/* Alternative login option */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-blue-800 mb-1">Or login with your account</p>
-                <p className="text-sm text-blue-600">
-                  You can also sign in to the app using your panel email and password instead of scanning the QR code.
-                </p>
               </div>
 
               {/* Back link */}
