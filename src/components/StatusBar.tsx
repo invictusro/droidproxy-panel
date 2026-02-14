@@ -18,6 +18,7 @@ interface UpcomingCharge {
   planTier: string;
   price: number;
   expiresAt: string;
+  autoExtend: boolean;
 }
 
 const PLAN_PRICES: Record<string, number> = { lite: 500, turbo: 700, nitro: 900 };
@@ -60,14 +61,15 @@ export default function StatusBar({ user }: StatusBarProps) {
             expired++;
           }
 
-          // Track upcoming charges with details
-          if (phone.license_auto_extend && phone.has_active_license && phone.plan_tier) {
+          // Track all phones with active licenses (both auto and manual billing)
+          if (phone.has_active_license && phone.plan_tier) {
             charges.push({
               phoneId: phone.id,
               phoneName: phone.name,
               planTier: phone.plan_tier,
               price: PLAN_PRICES[phone.plan_tier] || 0,
               expiresAt: phone.license_expires_at,
+              autoExtend: phone.license_auto_extend || false,
             });
           }
         });
@@ -226,36 +228,68 @@ export default function StatusBar({ user }: StatusBarProps) {
             {upcomingCharges.length === 0 ? (
               <div className="text-center py-8 text-zinc-500">
                 <Calendar className="w-12 h-12 mx-auto mb-3 text-zinc-300" />
-                <p>No upcoming charges</p>
-                <p className="text-sm mt-1">Enable auto-extend on your phone licenses to see charges here</p>
+                <p>No active licenses</p>
+                <p className="text-sm mt-1">Purchase a license for your phones to see charges here</p>
               </div>
             ) : (
               <>
-                <div className="space-y-3 mb-6 max-h-80 overflow-y-auto">
-                  {upcomingCharges.map((charge) => (
-                    <div key={charge.phoneId} className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg border border-zinc-200">
-                      <div>
-                        <p className="font-medium text-zinc-900">{charge.phoneName}</p>
-                        <p className="text-sm text-zinc-500">
-                          {charge.planTier.charAt(0).toUpperCase() + charge.planTier.slice(1)} plan
-                          <span className="mx-2">·</span>
-                          Renews {formatDate(charge.expiresAt)}
-                        </p>
-                      </div>
-                      <p className="font-semibold text-zinc-900">{formatCents(charge.price)}</p>
+                {/* Auto-billing phones */}
+                {upcomingCharges.filter(c => c.autoExtend).length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Auto-Renew</p>
+                    <div className="space-y-2">
+                      {upcomingCharges.filter(c => c.autoExtend).map((charge) => (
+                        <div key={charge.phoneId} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                          <div>
+                            <p className="font-medium text-zinc-900">{charge.phoneName}</p>
+                            <p className="text-sm text-emerald-600">
+                              {charge.planTier.charAt(0).toUpperCase() + charge.planTier.slice(1)} plan
+                              <span className="mx-2">·</span>
+                              Renews {formatDate(charge.expiresAt)}
+                            </p>
+                          </div>
+                          <p className="font-semibold text-zinc-900">{formatCents(charge.price)}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* Manual billing phones */}
+                {upcomingCharges.filter(c => !c.autoExtend).length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Manual Renewal</p>
+                    <div className="space-y-2">
+                      {upcomingCharges.filter(c => !c.autoExtend).map((charge) => (
+                        <div key={charge.phoneId} className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+                          <div>
+                            <p className="font-medium text-zinc-900">{charge.phoneName}</p>
+                            <p className="text-sm text-zinc-500">
+                              {charge.planTier.charAt(0).toUpperCase() + charge.planTier.slice(1)} plan
+                              <span className="mx-2">·</span>
+                              Expires {formatDate(charge.expiresAt)}
+                            </p>
+                          </div>
+                          <p className="font-semibold text-zinc-900">{formatCents(charge.price)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t border-zinc-200 pt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-600">Total</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <span className="text-zinc-600">Total (Auto-Renew)</span>
+                      <p className="text-xs text-zinc-400">{upcomingCharges.filter(c => c.autoExtend).length} phones</p>
+                    </div>
                     <span className="text-xl font-bold text-zinc-900">{formatCents(totalUpcoming)}</span>
                   </div>
+
                   {balance < totalUpcoming && (
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <p className="text-sm text-amber-800">
-                        Insufficient balance. You need {formatCents(totalUpcoming - balance)} more to cover all renewals.
+                        Insufficient balance. You need {formatCents(totalUpcoming - balance)} more to cover auto-renewals.
                       </p>
                       <button
                         onClick={() => {
@@ -268,6 +302,13 @@ export default function StatusBar({ user }: StatusBarProps) {
                       </button>
                     </div>
                   )}
+
+                  <button
+                    className="w-full py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 flex items-center justify-center gap-2"
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    Pay {formatCents(totalUpcoming)} Now
+                  </button>
                 </div>
               </>
             )}
