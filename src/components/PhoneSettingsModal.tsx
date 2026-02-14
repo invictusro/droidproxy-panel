@@ -460,18 +460,21 @@ export default function PhoneSettingsModal({
   // Generate 5-minute intervals for uptime display
   const get5MinIntervals = () => {
     const intervals: { time: string; status: 'online' | 'offline' | 'nodata' }[] = [];
-    // For now, we simulate based on hourly data. In production, backend would provide 5-min data.
+    // Get timezone offset to convert backend UTC hours to local hours
+    const offsetHours = -new Date().getTimezoneOffset() / 60;
+
     if (uptimeData?.hourly) {
-      for (let hour = 0; hour < 24; hour++) {
-        const hourData = uptimeData.hourly.find(h => h.hour === hour);
+      for (let localHour = 0; localHour < 24; localHour++) {
+        // Convert local hour to UTC to match backend data
+        const utcHour = (localHour - offsetHours + 24) % 24;
+        const hourData = uptimeData.hourly.find(h => h.hour === utcHour);
         for (let min = 0; min < 60; min += 5) {
-          const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+          const timeStr = `${String(localHour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
           if (!hourData || hourData.uptime === 0) {
             // No data or 0 uptime means we don't have tracking info - show as no data
             intervals.push({ time: timeStr, status: 'nodata' });
           } else {
             // Any uptime > 0 means we have data showing the phone was online (at least partially)
-            // Don't simulate offline - only show offline when we have explicit confirmation
             intervals.push({ time: timeStr, status: 'online' });
           }
         }
