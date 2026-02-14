@@ -259,6 +259,21 @@ export const api = {
   updatePhoneLogRetention: (phoneId: string, weeks: number) =>
     client.put(`/phones/${phoneId}/log-retention`, { log_retention_weeks: weeks }),
 
+  // API Keys
+  getAPIKeys: () => client.get('/api-keys'),
+  createAPIKey: (data: {
+    name: string;
+    scope?: 'all' | 'groups';
+    group_ids?: string[];
+  }) => client.post('/api-keys', data),
+  updateAPIKey: (id: string, data: {
+    name?: string;
+    scope?: 'all' | 'groups';
+    group_ids?: string[];
+    is_active?: boolean;
+  }) => client.put(`/api-keys/${id}`, data),
+  deleteAPIKey: (id: string) => client.delete(`/api-keys/${id}`),
+
   // Access Logs (admin - all phones)
   getAllAccessLogs: (params?: {
     limit?: number;

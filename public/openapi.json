@@ -1,0 +1,809 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DroidProxy Reseller API",
+    "description": "API for managing mobile proxies programmatically. This API allows you to list phones, create and manage proxy credentials, and control IP rotation.\n\n## Authentication\n\nAll endpoints require an API key passed in the `X-API-Key` header. You can create API keys from the dashboard.\n\n```\nX-API-Key: dp_your_api_key_here\n```\n\n## Access Control\n\nOnly phones with an active **Nitro** plan are accessible through this API. API keys can be scoped to all phones or specific phone groups.\n\n## Rate Limits\n\nThe API is rate limited to 100 requests per minute per API key.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "DroidProxy Support",
+      "email": "support@droidproxy.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.droidproxy.com/reseller",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/phones": {
+      "get": {
+        "tags": ["Phones"],
+        "summary": "List all phones",
+        "description": "Returns a list of all Nitro-plan phones accessible by your API key.",
+        "operationId": "listPhones",
+        "responses": {
+          "200": {
+            "description": "List of phones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "phones": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Phone"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "phones": [
+                    {
+                      "id": "550e8400-e29b-41d4-a716-446655440000",
+                      "name": "My Proxy 1",
+                      "status": "online",
+                      "plan_tier": "nitro",
+                      "plan_days_remaining": 25,
+                      "license_expires_at": "2026-03-15T00:00:00Z",
+                      "max_connections": 20,
+                      "speed_limit_mbps": 100,
+                      "active_connections": 3,
+                      "server_location": "New York, US",
+                      "server_ip": "1.2.3.4",
+                      "sim_country": "US",
+                      "sim_carrier": "T-Mobile",
+                      "created_at": "2026-01-15T10:30:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/phones/{phoneId}": {
+      "get": {
+        "tags": ["Phones"],
+        "summary": "Get phone details",
+        "description": "Returns detailed information about a specific phone.",
+        "operationId": "getPhone",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Phone details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Phone"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/phones/{phoneId}/credentials": {
+      "get": {
+        "tags": ["Credentials"],
+        "summary": "List credentials",
+        "description": "Returns all proxy credentials for a phone.",
+        "operationId": "listCredentials",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credentials": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Credential"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Credentials"],
+        "summary": "Create credential",
+        "description": "Creates a new proxy credential for a phone. The password is only returned once on creation.",
+        "operationId": "createCredential",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCredentialRequest"
+              },
+              "examples": {
+                "ip_auth": {
+                  "summary": "IP Authentication",
+                  "value": {
+                    "name": "Office IP",
+                    "auth_type": "ip",
+                    "proxy_type": "socks5",
+                    "allowed_ip": "203.0.113.50"
+                  }
+                },
+                "userpass_auth": {
+                  "summary": "Username/Password Authentication",
+                  "value": {
+                    "name": "Customer 1",
+                    "auth_type": "userpass",
+                    "proxy_type": "both",
+                    "expires_in_days": 30,
+                    "bandwidth_limit": 107374182400
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Credential created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialWithPassword"
+                },
+                "example": {
+                  "id": "660e8400-e29b-41d4-a716-446655440001",
+                  "name": "Customer 1",
+                  "auth_type": "userpass",
+                  "proxy_type": "both",
+                  "username": "user_a1b2c3d4",
+                  "password": "secret_password_here",
+                  "port": 10001,
+                  "proxy_host": "1.2.3.4",
+                  "socks5_url": "socks5://user_a1b2c3d4:PASSWORD@1.2.3.4:10001",
+                  "http_url": "http://user_a1b2c3d4:PASSWORD@1.2.3.4:10001",
+                  "expires_at": "2026-03-15T00:00:00Z",
+                  "is_active": true,
+                  "bandwidth_used": 0,
+                  "bandwidth_limit": 107374182400,
+                  "created_at": "2026-02-14T10:30:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/phones/{phoneId}/credentials/{credentialId}": {
+      "get": {
+        "tags": ["Credentials"],
+        "summary": "Get credential",
+        "description": "Returns details for a specific credential.",
+        "operationId": "getCredential",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Credential details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credential"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Credentials"],
+        "summary": "Delete credential",
+        "description": "Deletes (revokes) a proxy credential. This action is immediate and cannot be undone.",
+        "operationId": "deleteCredential",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Credential deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Credential deleted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/phones/{phoneId}/rotation": {
+      "get": {
+        "tags": ["Rotation"],
+        "summary": "Get rotation settings",
+        "description": "Returns the current IP rotation settings and rotation URL for a phone.",
+        "operationId": "getRotation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rotation settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotationSettings"
+                },
+                "example": {
+                  "rotation_mode": "api",
+                  "rotation_interval": 0,
+                  "rotation_enabled": true,
+                  "rotation_url": "https://api.droidproxy.com/rotate/abc123...",
+                  "has_rotation_token": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Rotation"],
+        "summary": "Update rotation settings",
+        "description": "Updates the IP rotation mode and interval for a phone.",
+        "operationId": "updateRotation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRotationRequest"
+              },
+              "examples": {
+                "api_mode": {
+                  "summary": "API-triggered rotation",
+                  "value": {
+                    "mode": "api"
+                  }
+                },
+                "timed_mode": {
+                  "summary": "Automatic timed rotation",
+                  "value": {
+                    "mode": "timed",
+                    "interval_minutes": 10
+                  }
+                },
+                "disabled": {
+                  "summary": "Disable rotation",
+                  "value": {
+                    "mode": "off"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rotation settings updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rotation_mode": {
+                      "type": "string"
+                    },
+                    "rotation_interval": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rotation_url": {
+                      "type": "string",
+                      "description": "Only returned when mode is 'api'"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/phones/{phoneId}/rotate-ip": {
+      "post": {
+        "tags": ["Rotation"],
+        "summary": "Trigger IP rotation",
+        "description": "Triggers an immediate IP rotation for the phone. The new IP will be reflected within 10-30 seconds.",
+        "operationId": "rotateIp",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PhoneId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rotation triggered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "IP rotation triggered"
+                    },
+                    "note": {
+                      "type": "string",
+                      "example": "New IP will be reflected in phone status within 10-30 seconds"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication. Create one from the dashboard."
+      }
+    },
+    "parameters": {
+      "PhoneId": {
+        "name": "phoneId",
+        "in": "path",
+        "required": true,
+        "description": "Phone UUID",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "CredentialId": {
+        "name": "credentialId",
+        "in": "path",
+        "required": true,
+        "description": "Credential UUID",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "schemas": {
+      "Phone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique phone identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Phone display name"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["online", "offline", "pending"],
+            "description": "Current connection status"
+          },
+          "plan_tier": {
+            "type": "string",
+            "enum": ["nitro"],
+            "description": "Current plan (always nitro for API access)"
+          },
+          "plan_days_remaining": {
+            "type": "integer",
+            "description": "Days until license expires"
+          },
+          "license_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "License expiration date"
+          },
+          "max_connections": {
+            "type": "integer",
+            "description": "Maximum allowed credentials"
+          },
+          "speed_limit_mbps": {
+            "type": "integer",
+            "description": "Speed limit in Mbit/sec"
+          },
+          "active_connections": {
+            "type": "integer",
+            "description": "Current active proxy connections"
+          },
+          "server_location": {
+            "type": "string",
+            "description": "Server location"
+          },
+          "server_ip": {
+            "type": "string",
+            "description": "Server IP address"
+          },
+          "sim_country": {
+            "type": "string",
+            "description": "SIM card country code"
+          },
+          "sim_carrier": {
+            "type": "string",
+            "description": "Mobile carrier name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Phone creation date"
+          }
+        }
+      },
+      "Credential": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Credential display name"
+          },
+          "auth_type": {
+            "type": "string",
+            "enum": ["ip", "userpass"],
+            "description": "Authentication method"
+          },
+          "proxy_type": {
+            "type": "string",
+            "enum": ["socks5", "http", "both"],
+            "description": "Proxy protocol"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username for userpass auth"
+          },
+          "allowed_ip": {
+            "type": "string",
+            "description": "Allowed IP for IP auth"
+          },
+          "port": {
+            "type": "integer",
+            "description": "Proxy port number"
+          },
+          "proxy_host": {
+            "type": "string",
+            "description": "Proxy server IP/hostname"
+          },
+          "socks5_url": {
+            "type": "string",
+            "description": "Full SOCKS5 proxy URL"
+          },
+          "http_url": {
+            "type": "string",
+            "description": "Full HTTP proxy URL"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Credential expiration date"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "bandwidth_used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bandwidth used in bytes"
+          },
+          "bandwidth_limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bandwidth limit in bytes (0 = unlimited)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CredentialWithPassword": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Credential"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "password": {
+                "type": "string",
+                "description": "Password (only shown on creation)"
+              }
+            }
+          }
+        ]
+      },
+      "CreateCredentialRequest": {
+        "type": "object",
+        "required": ["name", "auth_type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name for the credential",
+            "example": "Customer 1"
+          },
+          "auth_type": {
+            "type": "string",
+            "enum": ["ip", "userpass"],
+            "description": "Authentication method"
+          },
+          "proxy_type": {
+            "type": "string",
+            "enum": ["socks5", "http", "both"],
+            "default": "socks5",
+            "description": "Proxy protocol"
+          },
+          "allowed_ip": {
+            "type": "string",
+            "description": "Required for IP auth - the client IP to whitelist"
+          },
+          "username": {
+            "type": "string",
+            "description": "Optional custom username (auto-generated if not provided)"
+          },
+          "bandwidth_limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Bandwidth limit in bytes (0 = unlimited)",
+            "example": 107374182400
+          },
+          "expires_in_days": {
+            "type": "integer",
+            "description": "Credential expiration in days (0 = no expiry)",
+            "example": 30
+          }
+        }
+      },
+      "RotationSettings": {
+        "type": "object",
+        "properties": {
+          "rotation_mode": {
+            "type": "string",
+            "enum": ["off", "timed", "api"],
+            "description": "Current rotation mode"
+          },
+          "rotation_interval": {
+            "type": "integer",
+            "description": "Interval in minutes (for timed mode)"
+          },
+          "rotation_enabled": {
+            "type": "boolean"
+          },
+          "rotation_url": {
+            "type": "string",
+            "description": "URL to trigger rotation (for api mode)"
+          },
+          "has_rotation_token": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateRotationRequest": {
+        "type": "object",
+        "required": ["mode"],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": ["off", "timed", "api"],
+            "description": "Rotation mode"
+          },
+          "interval_minutes": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 120,
+            "description": "Required for timed mode (2-120 minutes)"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Invalid request: name and auth_type are required"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Invalid or missing API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Invalid API key"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "API key does not have access to this resource",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "API key does not have access to this phone"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found or not eligible (requires Nitro plan)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Phone not found or not eligible (requires Nitro plan)"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Smartphone, Server, Users, LogOut, Download } from 'lucide-react';
+import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown } from 'lucide-react';
 import APKDownloadModal from './APKDownloadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +77,35 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                 <Download className="w-4 h-4" />
                 Download APK
               </Button>
+
+              {/* API Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant={location.pathname.startsWith('/api') ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={`gap-2 ${location.pathname.startsWith('/api') ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+                  >
+                    <Key className="w-4 h-4" />
+                    API
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48 bg-white border-border shadow-lg">
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/api/keys" className="flex items-center gap-2">
+                      <Key className="w-4 h-4" />
+                      API Keys
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/api/docs" className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Documentation
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

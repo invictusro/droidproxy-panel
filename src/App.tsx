@@ -8,6 +8,8 @@ import Phones from './pages/Phones';
 import AddPhone from './pages/AddPhone';
 import Servers from './pages/admin/Servers';
 import Users from './pages/admin/Users';
+import APIKeys from './pages/api/Keys';
+import APIDocs from './pages/api/Docs';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +96,10 @@ function AppRoutes() {
         <Route index element={<Navigate to="/phones" replace />} />
         <Route path="phones" element={<Phones />} />
         <Route path="phones/add" element={<AddPhone />} />
+
+        {/* API routes */}
+        <Route path="api/keys" element={<APIKeys />} />
+        <Route path="api/docs" element={<APIDocs />} />
 
         {/* Admin routes */}
         <Route path="admin/servers" element={

@@ -299,3 +299,21 @@ export interface PlanChangePreview {
   expires_at: string;
   new_limits: PlanLimits;
 }
+
+// API Keys
+export type APIKeyScope = 'all' | 'groups';
+
+export interface APIKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  scope: APIKeyScope;
+  group_ids: string[];
+  is_active: boolean;
+  last_used_at?: string;
+  created_at: string;
+}
+
+export interface APIKeyCreateResponse extends APIKey {
+  key: string; // Only returned on creation
+}
