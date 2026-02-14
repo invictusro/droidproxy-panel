@@ -90,7 +90,15 @@ export default function StatusBar({ user }: StatusBarProps) {
   if (!user || loading) return null;
 
   const formatCents = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-  const totalUpcoming = upcomingCharges.reduce((sum, c) => sum + c.price, 0);
+
+  // Only show charges expiring within 7 days
+  const now = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const soonExpiringCharges = upcomingCharges.filter(c => {
+    const expiresAt = new Date(c.expiresAt).getTime();
+    return expiresAt - now <= sevenDaysMs;
+  });
+  const totalUpcoming = soonExpiringCharges.reduce((sum, c) => sum + c.price, 0);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -114,20 +122,20 @@ export default function StatusBar({ user }: StatusBarProps) {
                 <Plus className="w-3 h-3 text-emerald-600" />
               </button>
 
-              {/* Upcoming Charges - Clickable */}
-              <button
-                onClick={() => setShowUpcomingModal(true)}
-                className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors"
-              >
-                <Calendar className="w-4 h-4 text-blue-600" />
-                <span className="text-zinc-500">Upcoming:</span>
-                <span className="font-semibold text-zinc-900">{formatCents(totalUpcoming)}</span>
-                {upcomingCharges.length > 0 && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                    {upcomingCharges.length}
+              {/* Upcoming Charges - Only show when licenses expire within 7 days */}
+              {soonExpiringCharges.length > 0 && (
+                <button
+                  onClick={() => setShowUpcomingModal(true)}
+                  className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors"
+                >
+                  <Calendar className="w-4 h-4 text-amber-600" />
+                  <span className="text-amber-600">Expiring soon:</span>
+                  <span className="font-semibold text-amber-700">{formatCents(totalUpcoming)}</span>
+                  <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                    {soonExpiringCharges.length}
                   </span>
-                )}
-              </button>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-6">
@@ -219,26 +227,26 @@ export default function StatusBar({ user }: StatusBarProps) {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-zinc-200">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-zinc-900">Upcoming Charges</h2>
+              <h2 className="text-xl font-semibold text-zinc-900">Expiring Soon</h2>
               <button onClick={() => setShowUpcomingModal(false)} className="p-2 hover:bg-zinc-100 rounded-full">
                 <X className="w-5 h-5 text-zinc-500" />
               </button>
             </div>
 
-            {upcomingCharges.length === 0 ? (
+            {soonExpiringCharges.length === 0 ? (
               <div className="text-center py-8 text-zinc-500">
                 <Calendar className="w-12 h-12 mx-auto mb-3 text-zinc-300" />
-                <p>No active licenses</p>
-                <p className="text-sm mt-1">Purchase a license for your phones to see charges here</p>
+                <p>No licenses expiring soon</p>
+                <p className="text-sm mt-1">Licenses expiring within 7 days will appear here</p>
               </div>
             ) : (
               <>
                 {/* Auto-billing phones */}
-                {upcomingCharges.filter(c => c.autoExtend).length > 0 && (
+                {soonExpiringCharges.filter(c => c.autoExtend).length > 0 && (
                   <div className="mb-4">
                     <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Auto-Renew</p>
                     <div className="space-y-2">
-                      {upcomingCharges.filter(c => c.autoExtend).map((charge) => (
+                      {soonExpiringCharges.filter(c => c.autoExtend).map((charge) => (
                         <div key={charge.phoneId} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-200">
                           <div>
                             <p className="font-medium text-zinc-900">{charge.phoneName}</p>
@@ -256,15 +264,15 @@ export default function StatusBar({ user }: StatusBarProps) {
                 )}
 
                 {/* Manual billing phones */}
-                {upcomingCharges.filter(c => !c.autoExtend).length > 0 && (
+                {soonExpiringCharges.filter(c => !c.autoExtend).length > 0 && (
                   <div className="mb-4">
                     <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">Manual Renewal</p>
                     <div className="space-y-2">
-                      {upcomingCharges.filter(c => !c.autoExtend).map((charge) => (
-                        <div key={charge.phoneId} className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+                      {soonExpiringCharges.filter(c => !c.autoExtend).map((charge) => (
+                        <div key={charge.phoneId} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
                           <div>
                             <p className="font-medium text-zinc-900">{charge.phoneName}</p>
-                            <p className="text-sm text-zinc-500">
+                            <p className="text-sm text-amber-600">
                               {charge.planTier.charAt(0).toUpperCase() + charge.planTier.slice(1)} plan
                               <span className="mx-2">·</span>
                               Expires {formatDate(charge.expiresAt)}
@@ -285,19 +293,19 @@ export default function StatusBar({ user }: StatusBarProps) {
                 <div className="border-t border-zinc-200 pt-4">
                   {/* Totals */}
                   <div className="space-y-2 mb-4">
-                    {upcomingCharges.filter(c => c.autoExtend).length > 0 && (
+                    {soonExpiringCharges.filter(c => c.autoExtend).length > 0 && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-zinc-500">Auto-Renew ({upcomingCharges.filter(c => c.autoExtend).length})</span>
+                        <span className="text-zinc-500">Auto-Renew ({soonExpiringCharges.filter(c => c.autoExtend).length})</span>
                         <span className="font-medium text-zinc-700">
-                          {formatCents(upcomingCharges.filter(c => c.autoExtend).reduce((sum, c) => sum + c.price, 0))}
+                          {formatCents(soonExpiringCharges.filter(c => c.autoExtend).reduce((sum, c) => sum + c.price, 0))}
                         </span>
                       </div>
                     )}
-                    {upcomingCharges.filter(c => !c.autoExtend).length > 0 && (
+                    {soonExpiringCharges.filter(c => !c.autoExtend).length > 0 && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-zinc-500">Manual ({upcomingCharges.filter(c => !c.autoExtend).length})</span>
+                        <span className="text-zinc-500">Manual ({soonExpiringCharges.filter(c => !c.autoExtend).length})</span>
                         <span className="font-medium text-zinc-700">
-                          {formatCents(upcomingCharges.filter(c => !c.autoExtend).reduce((sum, c) => sum + c.price, 0))}
+                          {formatCents(soonExpiringCharges.filter(c => !c.autoExtend).reduce((sum, c) => sum + c.price, 0))}
                         </span>
                       </div>
                     )}
