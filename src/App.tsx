@@ -68,7 +68,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, login, logout, isLoading, isAuthenticated } = useAuth();
+  const { user, login, logout, isLoading, isAuthenticated, centrifugoToken, centrifugoUrl } = useAuth();
 
   if (isLoading) {
     return (
@@ -88,7 +88,7 @@ function AppRoutes() {
 
       <Route element={
         <ProtectedRoute>
-          <Layout user={user} onLogout={logout} />
+          <Layout user={user} onLogout={logout} centrifugoToken={centrifugoToken} centrifugoUrl={centrifugoUrl} />
         </ProtectedRoute>
       }>
         <Route index element={<Navigate to="/phones" replace />} />

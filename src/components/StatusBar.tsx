@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Wallet, Calendar, Wifi, AlertTriangle, X, Plus, CreditCard } from 'lucide-react';
 import { api } from '../api/client';
+import { useCentrifugo } from '../hooks/useCentrifugo';
 
 interface StatusBarProps {
   user: { name: string; picture: string; role: string } | null;
+  centrifugoToken: string | null;
+  centrifugoUrl: string | null;
 }
 
 interface PhoneStats {
@@ -23,16 +26,42 @@ interface UpcomingCharge {
 
 const PLAN_PRICES: Record<string, number> = { lite: 500, turbo: 700, nitro: 900 };
 
-export default function StatusBar({ user }: StatusBarProps) {
+export default function StatusBar({ user, centrifugoToken, centrifugoUrl }: StatusBarProps) {
   const [balance, setBalance] = useState<number>(0);
   const [upcomingCharges, setUpcomingCharges] = useState<UpcomingCharge[]>([]);
-  const [phoneStats, setPhoneStats] = useState<PhoneStats>({ online: 0, total: 0, expired: 0 });
+  const [phones, setPhones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modal states
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showUpcomingModal, setShowUpcomingModal] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('10');
+
+  // Get phone IDs for Centrifugo subscription
+  const phoneIds = useMemo(() => phones.map(p => p.id), [phones]);
+  const { statuses } = useCentrifugo(phoneIds, centrifugoToken, centrifugoUrl);
+
+  // Calculate phone stats using real-time Centrifugo status
+  const phoneStats = useMemo(() => {
+    let online = 0;
+    let expired = 0;
+
+    phones.forEach((phone: any) => {
+      // Get real-time status from Centrifugo
+      const liveStatus = statuses[phone.id];
+      const status = liveStatus?.status || (phone.paired_at ? 'offline' : 'pending');
+
+      if (status === 'online') {
+        online++;
+      }
+
+      if (!phone.has_active_license) {
+        expired++;
+      }
+    });
+
+    return { online, total: phones.length, expired };
+  }, [phones, statuses]);
 
   useEffect(() => {
     if (!user) return;
@@ -46,21 +75,12 @@ export default function StatusBar({ user }: StatusBarProps) {
 
         setBalance(balanceRes.data.balance || 0);
 
-        const phones = phonesRes.data.phones || [];
+        const phonesData = phonesRes.data.phones || [];
+        setPhones(phonesData);
 
-        let online = 0;
-        let expired = 0;
         const charges: UpcomingCharge[] = [];
 
-        phones.forEach((phone: any) => {
-          if (phone.status === 'online') {
-            online++;
-          }
-
-          if (!phone.has_active_license) {
-            expired++;
-          }
-
+        phonesData.forEach((phone: any) => {
           // Track all phones with active licenses (both auto and manual billing)
           if (phone.has_active_license && phone.plan_tier) {
             charges.push({
@@ -74,7 +94,6 @@ export default function StatusBar({ user }: StatusBarProps) {
           }
         });
 
-        setPhoneStats({ online, total: phones.length, expired });
         setUpcomingCharges(charges);
       } catch (error) {
         console.error('Failed to fetch status data:', error);
