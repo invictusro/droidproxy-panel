@@ -56,7 +56,6 @@
                       "speed_limit_mbps": 100,
                       "active_connections": 3,
                       "server_location": "New York, US",
-                      "server_ip": "1.2.3.4",
                       "sim_country": "US",
                       "sim_carrier": "T-Mobile",
                       "created_at": "2026-01-15T10:30:00Z"
@@ -554,10 +553,6 @@
           "server_location": {
             "type": "string",
             "description": "Server location"
-          },
-          "server_ip": {
-            "type": "string",
-            "description": "Server IP address"
           },
           "sim_country": {
             "type": "string",
