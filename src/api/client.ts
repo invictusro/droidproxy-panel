@@ -102,6 +102,12 @@ export const api = {
     client.put(`/phones/${phoneId}/license`, data),
   cancelLicense: (phoneId: string) =>
     client.delete(`/phones/${phoneId}/license`),
+  previewPlanChange: (phoneId: string, planTier: 'lite' | 'turbo' | 'nitro') =>
+    client.get(`/phones/${phoneId}/license/change-preview?plan_tier=${planTier}`),
+  changePlan: (phoneId: string, data: {
+    plan_tier: 'lite' | 'turbo' | 'nitro';
+    confirm_no_refund?: boolean;
+  }) => client.put(`/phones/${phoneId}/license/change`, data),
 
   // Phone Domain Blocking
   getPhoneBlockedDomains: (phoneId: string) => client.get(`/phones/${phoneId}/blocked-domains`),

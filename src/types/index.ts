@@ -278,3 +278,23 @@ export interface Plan {
   price_formatted: string;
   limits: PlanLimits;
 }
+
+export interface PlanChangePreview {
+  change_type: 'upgrade' | 'downgrade';
+  current_plan: PlanTier;
+  new_plan: PlanTier;
+  current_price: number;
+  new_price: number;
+  total_days?: number;
+  days_remaining: number;
+  price_difference?: number;
+  charge_amount?: number;
+  refund_amount?: number;
+  current_balance?: number;
+  balance_after?: number;
+  can_afford?: boolean;
+  warning?: string;
+  requires_confirmation?: boolean;
+  expires_at: string;
+  new_limits: PlanLimits;
+}

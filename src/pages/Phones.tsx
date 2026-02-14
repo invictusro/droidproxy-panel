@@ -171,8 +171,8 @@ export default function Phones() {
       // Get SIM info from Centrifugo status (real-time) or fallback to API data (stored)
       const sim_country = liveStatus?.sim_country || phone.sim_country;
       const sim_carrier = liveStatus?.sim_carrier || phone.sim_carrier;
-      // Get connection counts from Centrifugo (real-time)
-      const active_connections = liveStatus?.active_connections;
+      // Get active connections from API (hub reports every ~60s) - more accurate than APK's Centrifugo value
+      const active_connections = phone.active_connections ?? 0;
       const total_connections = liveStatus?.total_connections;
       return {
         ...phone,
@@ -830,7 +830,7 @@ export default function Phones() {
                               <span className={phone.active_connections && phone.active_connections > 0 ? 'text-emerald-600' : 'text-zinc-600'}>
                                 {phone.active_connections ?? 0}
                               </span>
-                              <span className="text-zinc-400">/10</span>
+                              <span className="text-zinc-400">/{phone.max_connections || '-'}</span>
                             </span>
                           ) : (
                             <span className="text-zinc-400 text-sm">-</span>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronLeft, ChevronRight, Activity, Database, Download, CreditCard, Smartphone, Battery, Cpu, Info, Settings, AlertTriangle, Calendar } from 'lucide-react';
 import { api } from '../api/client';
-import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType, PhoneLicense, Plan } from '../types';
+import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType, PhoneLicense, Plan, PlanChangePreview, PlanTier } from '../types';
 
 type RotationMode = 'off' | 'timed' | 'api';
 type MainSection = 'overview' | 'license' | 'credentials' | 'rotation' | 'traffic' | 'uptime' | 'restrictions' | 'device' | 'actions';
@@ -65,6 +65,9 @@ export default function PhoneSettingsModal({
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingLicense, setLoadingLicense] = useState(false);
   const [purchasingLicense, setPurchasingLicense] = useState(false);
+  const [planChangePreview, setPlanChangePreview] = useState<PlanChangePreview | null>(null);
+  const [loadingPlanChange, setLoadingPlanChange] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
 
   // Phone-level blocked domains
   const [phoneBlockedDomains, setPhoneBlockedDomains] = useState<string[]>([]);
@@ -237,6 +240,45 @@ export default function PhoneSettingsModal({
       const msg = error.response?.data?.error || 'Failed to cancel license';
       alert(msg);
     }
+  };
+
+  const handlePreviewPlanChange = async (newTier: PlanTier) => {
+    setLoadingPlanChange(true);
+    setPlanChangePreview(null);
+    try {
+      const res = await api.previewPlanChange(phone.id, newTier);
+      setPlanChangePreview(res.data);
+    } catch (error: any) {
+      const msg = error.response?.data?.error || 'Failed to preview plan change';
+      alert(msg);
+    }
+    setLoadingPlanChange(false);
+  };
+
+  const handleChangePlan = async () => {
+    if (!planChangePreview) return;
+
+    // For downgrade, require confirmation
+    if (planChangePreview.change_type === 'downgrade') {
+      if (!confirm('Downgrading will immediately reduce your plan limits. No refund will be provided. Continue?')) {
+        return;
+      }
+    }
+
+    setChangingPlan(true);
+    try {
+      await api.changePlan(phone.id, {
+        plan_tier: planChangePreview.new_plan,
+        confirm_no_refund: planChangePreview.change_type === 'downgrade',
+      });
+      setPlanChangePreview(null);
+      await loadLicenseData();
+      setHasLicense(true);
+    } catch (error: any) {
+      const msg = error.response?.data?.error || 'Failed to change plan';
+      alert(msg);
+    }
+    setChangingPlan(false);
   };
 
   const getDateRange = (range: string): { start: string; end: string } => {
@@ -720,6 +762,125 @@ export default function PhoneSettingsModal({
                             </div>
                           </div>
                         )}
+
+                        {/* Change Plan Options */}
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <p className="text-sm font-medium text-zinc-700 mb-3">Change Plan</p>
+                          <div className="flex gap-2">
+                            {plans.filter(p => p.tier !== license.plan_tier).map((plan) => {
+                              const isUpgrade = plan.price_cents > (plans.find(p => p.tier === license.plan_tier)?.price_cents || 0);
+                              return (
+                                <button
+                                  key={plan.tier}
+                                  onClick={() => handlePreviewPlanChange(plan.tier)}
+                                  disabled={loadingPlanChange}
+                                  className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
+                                    isUpgrade
+                                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300'
+                                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 border border-zinc-200'
+                                  }`}
+                                >
+                                  {isUpgrade ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                                  {plan.name} ({plan.price_formatted})
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Plan Change Preview */}
+                          {loadingPlanChange && (
+                            <div className="mt-4 flex justify-center">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+                            </div>
+                          )}
+
+                          {planChangePreview && (
+                            <div className={`mt-4 p-4 rounded-lg border ${
+                              planChangePreview.change_type === 'upgrade'
+                                ? 'bg-emerald-50 border-emerald-200'
+                                : 'bg-amber-50 border-amber-200'
+                            }`}>
+                              <div className="flex items-center gap-2 mb-3">
+                                {planChangePreview.change_type === 'upgrade' ? (
+                                  <ArrowUp className="w-5 h-5 text-emerald-600" />
+                                ) : (
+                                  <ArrowDown className="w-5 h-5 text-amber-600" />
+                                )}
+                                <span className={`font-semibold ${
+                                  planChangePreview.change_type === 'upgrade' ? 'text-emerald-800' : 'text-amber-800'
+                                }`}>
+                                  {planChangePreview.change_type === 'upgrade' ? 'Upgrade' : 'Downgrade'} to {planChangePreview.new_plan.toUpperCase()}
+                                </span>
+                              </div>
+
+                              <div className="space-y-2 text-sm mb-4">
+                                <div className="flex justify-between">
+                                  <span className="text-zinc-600">Days remaining:</span>
+                                  <span className="font-medium">{planChangePreview.days_remaining}</span>
+                                </div>
+                                {planChangePreview.change_type === 'upgrade' && (
+                                  <>
+                                    <div className="flex justify-between">
+                                      <span className="text-zinc-600">Prorated charge:</span>
+                                      <span className="font-medium text-emerald-700">
+                                        ${((planChangePreview.charge_amount || 0) / 100).toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-zinc-600">Your balance:</span>
+                                      <span className={`font-medium ${planChangePreview.can_afford ? 'text-emerald-700' : 'text-red-600'}`}>
+                                        ${((planChangePreview.current_balance || 0) / 100).toFixed(2)}
+                                      </span>
+                                    </div>
+                                    {!planChangePreview.can_afford && (
+                                      <p className="text-red-600 text-xs mt-2">
+                                        Insufficient balance. Add ${(((planChangePreview.charge_amount || 0) - (planChangePreview.current_balance || 0)) / 100).toFixed(2)} more.
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                                {planChangePreview.change_type === 'downgrade' && planChangePreview.warning && (
+                                  <p className="text-amber-700 text-xs mt-2">{planChangePreview.warning}</p>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 text-xs mb-4 p-2 bg-white/50 rounded-lg">
+                                <div>
+                                  <span className="text-zinc-500">Speed</span>
+                                  <p className="font-semibold">{planChangePreview.new_limits.speed_limit_mbps} Mbit/s</p>
+                                </div>
+                                <div>
+                                  <span className="text-zinc-500">Connections</span>
+                                  <p className="font-semibold">{planChangePreview.new_limits.max_connections}</p>
+                                </div>
+                                <div>
+                                  <span className="text-zinc-500">Logs</span>
+                                  <p className="font-semibold">{planChangePreview.new_limits.log_weeks} weeks</p>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setPlanChangePreview(null)}
+                                  className="flex-1 py-2 text-sm text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={handleChangePlan}
+                                  disabled={changingPlan || (planChangePreview.change_type === 'upgrade' && !planChangePreview.can_afford)}
+                                  className={`flex-1 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
+                                    planChangePreview.change_type === 'upgrade'
+                                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                      : 'bg-amber-600 text-white hover:bg-amber-700'
+                                  }`}
+                                >
+                                  {changingPlan ? 'Processing...' : planChangePreview.change_type === 'upgrade' ? 'Confirm Upgrade' : 'Confirm Downgrade'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : license && license.status === 'expired' ? (
                       /* Expired License */

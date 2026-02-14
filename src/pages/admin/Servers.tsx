@@ -9,8 +9,6 @@ interface ServerForm {
   location: string;
   ip: string;
   wireguard_port: number;
-  proxy_port_start: number;
-  proxy_port_end: number;
   hub_api_port: number;
   ssh_port: number;
   ssh_user: string;
@@ -25,8 +23,6 @@ const initialForm: ServerForm = {
   location: '',
   ip: '',
   wireguard_port: 51820,
-  proxy_port_start: 10000,
-  proxy_port_end: 19999,
   hub_api_port: 8081,
   ssh_port: 22,
   ssh_user: 'root',
@@ -178,8 +174,6 @@ export default function Servers() {
       location: server.location,
       ip: server.ip || '',
       wireguard_port: server.wireguard_port || 51820,
-      proxy_port_start: server.proxy_port_start || 10000,
-      proxy_port_end: server.proxy_port_end || 19999,
       hub_api_port: server.hub_api_port || 8081,
       ssh_port: 22,
       ssh_user: 'root',
@@ -415,10 +409,9 @@ export default function Servers() {
                   </div>
                 )}
 
-                {/* Phone Count & Ports */}
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{server.phone_count || 0} phones</span>
-                  <span>Ports: {server.proxy_port_start}-{server.proxy_port_end}</span>
+                {/* Phone Count */}
+                <div className="text-sm text-gray-600">
+                  {server.phone_count || 0} phones
                 </div>
 
                 {/* CPU Specs - show if benchmark data exists */}
@@ -609,27 +602,6 @@ export default function Servers() {
                       type="number"
                       value={form.hub_api_port}
                       onChange={(e) => setForm({ ...form, hub_api_port: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Port Start</label>
-                    <input
-                      type="number"
-                      value={form.proxy_port_start}
-                      onChange={(e) => setForm({ ...form, proxy_port_start: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Port End</label>
-                    <input
-                      type="number"
-                      value={form.proxy_port_end}
-                      onChange={(e) => setForm({ ...form, proxy_port_end: parseInt(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     />
                   </div>
