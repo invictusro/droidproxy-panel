@@ -270,7 +270,12 @@ export default function StatusBar({ user }: StatusBarProps) {
                               Expires {formatDate(charge.expiresAt)}
                             </p>
                           </div>
-                          <p className="font-semibold text-zinc-900">{formatCents(charge.price)}</p>
+                          <div className="flex items-center gap-3">
+                            <p className="font-semibold text-zinc-900">{formatCents(charge.price)}</p>
+                            <button className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700">
+                              Renew
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -278,18 +283,34 @@ export default function StatusBar({ user }: StatusBarProps) {
                 )}
 
                 <div className="border-t border-zinc-200 pt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <span className="text-zinc-600">Total (Auto-Renew)</span>
-                      <p className="text-xs text-zinc-400">{upcomingCharges.filter(c => c.autoExtend).length} phones</p>
+                  {/* Totals */}
+                  <div className="space-y-2 mb-4">
+                    {upcomingCharges.filter(c => c.autoExtend).length > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-zinc-500">Auto-Renew ({upcomingCharges.filter(c => c.autoExtend).length})</span>
+                        <span className="font-medium text-zinc-700">
+                          {formatCents(upcomingCharges.filter(c => c.autoExtend).reduce((sum, c) => sum + c.price, 0))}
+                        </span>
+                      </div>
+                    )}
+                    {upcomingCharges.filter(c => !c.autoExtend).length > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-zinc-500">Manual ({upcomingCharges.filter(c => !c.autoExtend).length})</span>
+                        <span className="font-medium text-zinc-700">
+                          {formatCents(upcomingCharges.filter(c => !c.autoExtend).reduce((sum, c) => sum + c.price, 0))}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
+                      <span className="text-zinc-900 font-medium">Total</span>
+                      <span className="text-xl font-bold text-zinc-900">{formatCents(totalUpcoming)}</span>
                     </div>
-                    <span className="text-xl font-bold text-zinc-900">{formatCents(totalUpcoming)}</span>
                   </div>
 
                   {balance < totalUpcoming && (
                     <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <p className="text-sm text-amber-800">
-                        Insufficient balance. You need {formatCents(totalUpcoming - balance)} more to cover auto-renewals.
+                        Insufficient balance. You need {formatCents(totalUpcoming - balance)} more to cover all renewals.
                       </p>
                       <button
                         onClick={() => {
@@ -307,7 +328,7 @@ export default function StatusBar({ user }: StatusBarProps) {
                     className="w-full py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 flex items-center justify-center gap-2"
                   >
                     <CreditCard className="w-5 h-5" />
-                    Pay {formatCents(totalUpcoming)} Now
+                    Pay All {formatCents(totalUpcoming)}
                   </button>
                 </div>
               </>
