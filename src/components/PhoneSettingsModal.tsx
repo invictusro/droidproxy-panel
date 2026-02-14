@@ -94,6 +94,17 @@ export default function PhoneSettingsModal({
     expires_at: '',
   });
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    planTier?: string;
+    planPrice?: string;
+    isError?: boolean;
+  }>({ show: false, title: '', message: '' });
+  const [purchaseAutoExtend, setPurchaseAutoExtend] = useState(true);
+
   // Access Logs state
   const [exportingLogs, setExportingLogs] = useState(false);
   const [exportStartDate, setExportStartDate] = useState(() => {
@@ -166,15 +177,33 @@ export default function PhoneSettingsModal({
     setLoadingLicense(false);
   };
 
-  const handlePurchaseLicense = async (planTier: string) => {
-    if (!confirm(`Purchase ${planTier.toUpperCase()} plan for this phone?`)) return;
+  const handlePurchaseLicense = (planTier: string) => {
+    const plan = plans.find(p => p.tier === planTier);
+    setPurchaseAutoExtend(true); // Reset to enabled by default
+    setConfirmModal({
+      show: true,
+      title: 'Confirm Purchase',
+      message: `Purchase ${planTier.toUpperCase()} plan for this phone?`,
+      planTier,
+      planPrice: plan?.price_formatted || '',
+    });
+  };
+
+  const confirmPurchase = async () => {
+    if (!confirmModal.planTier) return;
+    setConfirmModal(prev => ({ ...prev, show: false }));
     setPurchasingLicense(true);
     try {
-      await api.purchaseLicense(phone.id, { plan_tier: planTier as any, auto_extend: false });
+      await api.purchaseLicense(phone.id, { plan_tier: confirmModal.planTier as any, auto_extend: purchaseAutoExtend });
       await loadLicenseData();
     } catch (error: any) {
       const msg = error.response?.data?.error || 'Failed to purchase license';
-      alert(msg);
+      setConfirmModal({
+        show: true,
+        title: 'Purchase Failed',
+        message: msg,
+        isError: true,
+      });
     }
     setPurchasingLicense(false);
   };
@@ -1326,6 +1355,66 @@ export default function PhoneSettingsModal({
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-900">{confirmModal.title}</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">{confirmModal.message}</p>
+              {confirmModal.planTier && confirmModal.planPrice && (
+                <>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold text-emerald-900 capitalize">{confirmModal.planTier}</span>
+                        <span className="text-emerald-700 ml-2">Plan</span>
+                      </div>
+                      <div className="text-xl font-bold text-emerald-900">{confirmModal.planPrice}</div>
+                    </div>
+                  </div>
+                  <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                    <div>
+                      <div className="font-medium text-gray-900">Auto-extend license</div>
+                      <div className="text-sm text-gray-500">Automatically renew when license expires</div>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={purchaseAutoExtend}
+                        onChange={(e) => setPurchaseAutoExtend(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className={`w-11 h-6 rounded-full transition-colors ${purchaseAutoExtend ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${purchaseAutoExtend ? 'translate-x-5' : ''}`} />
+                      </div>
+                    </div>
+                  </label>
+                </>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                {confirmModal.isError ? 'Close' : 'Cancel'}
+              </button>
+              {!confirmModal.isError && (
+                <button
+                  onClick={confirmPurchase}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                >
+                  Confirm Purchase
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
