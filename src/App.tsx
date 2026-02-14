@@ -36,6 +36,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// APK Download redirect - redirects to GitHub releases
+function APKRedirect() {
+  window.location.href = 'https://github.com/invictusro/droidproxy-apk/releases/latest/download/droidproxy.apk';
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Redirecting to download...</p>
+      </div>
+    </div>
+  );
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
@@ -71,6 +84,7 @@ function AppRoutes() {
         isAuthenticated ? <Navigate to="/phones" replace /> : <Login />
       } />
       <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
+      <Route path="/apk" element={<APKRedirect />} />
 
       <Route element={
         <ProtectedRoute>
