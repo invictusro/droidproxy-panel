@@ -151,6 +151,7 @@ export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }:
             /* Pair Step */
             <div className="space-y-4">
               {/* Method Selector Tabs */}
+              <p className="text-sm text-gray-600 text-center mb-2">Choose how you want to pair your phone</p>
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setPairMethod('qr')}
