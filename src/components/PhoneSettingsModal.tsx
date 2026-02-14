@@ -655,11 +655,11 @@ export default function PhoneSettingsModal({
 
                         <div className="grid grid-cols-3 gap-4">
                           {plans.map((plan) => {
-                            const isPopular = plan.tier === 'turbo';
+                            const isPopular = plan.tier === 'nitro';
                             const planDescriptions: Record<string, string> = {
                               lite: 'Basic browsing & light usage',
                               turbo: 'Streaming & daily use',
-                              nitro: 'Heavy usage & multiple users',
+                              nitro: 'Reselling & API access',
                             };
                             return (
                               <div
