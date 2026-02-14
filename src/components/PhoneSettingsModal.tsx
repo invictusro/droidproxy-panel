@@ -228,6 +228,19 @@ export default function PhoneSettingsModal({
     }
   };
 
+  const handleCancelLicense = async () => {
+    if (!confirm('Are you sure you want to cancel your license? This cannot be undone and no refund will be provided.')) return;
+    try {
+      await api.cancelLicense(phone.id);
+      setLicense(null);
+      setHasLicense(false);
+      setActiveSection('license');
+    } catch (error: any) {
+      const msg = error.response?.data?.error || 'Failed to cancel license';
+      alert(msg);
+    }
+  };
+
   const getDateRange = (range: string): { start: string; end: string } => {
     const today = new Date();
     const end = getLocalDateString(today);
@@ -691,6 +704,21 @@ export default function PhoneSettingsModal({
                               <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${license.auto_extend ? 'translate-x-6' : 'translate-x-0.5'}`} />
                             </button>
                           </label>
+                        </div>
+
+                        <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-red-700">Cancel License</p>
+                              <p className="text-xs text-red-600 mt-0.5">Stop your license immediately. No refund will be provided.</p>
+                            </div>
+                            <button
+                              onClick={handleCancelLicense}
+                              className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ) : license && license.status === 'expired' ? (

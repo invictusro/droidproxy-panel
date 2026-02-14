@@ -100,6 +100,8 @@ export const api = {
   }) => client.post(`/phones/${phoneId}/license`, data),
   updateLicense: (phoneId: string, data: { auto_extend?: boolean }) =>
     client.put(`/phones/${phoneId}/license`, data),
+  cancelLicense: (phoneId: string) =>
+    client.delete(`/phones/${phoneId}/license`),
 
   // Phone Domain Blocking
   getPhoneBlockedDomains: (phoneId: string) => client.get(`/phones/${phoneId}/blocked-domains`),
