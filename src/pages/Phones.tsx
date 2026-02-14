@@ -722,6 +722,7 @@ export default function Phones() {
                     <TableHead className="font-semibold text-foreground">Name</TableHead>
                     <TableHead className="font-semibold text-foreground">Group</TableHead>
                     <TableHead className="font-semibold text-foreground">Status</TableHead>
+                    <TableHead className="font-semibold text-foreground">License</TableHead>
                     <TableHead className="font-semibold text-foreground">Server</TableHead>
                     <TableHead className="font-semibold text-foreground">SIM</TableHead>
                     <TableHead className="font-semibold text-foreground">Connections</TableHead>
@@ -794,6 +795,22 @@ export default function Phones() {
                           )}
                         </TableCell>
                         <TableCell>{getStatusBadge(phone.status)}</TableCell>
+                        <TableCell>
+                          {phone.has_active_license && phone.plan_tier ? (
+                            <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">
+                              {phone.plan_tier.charAt(0).toUpperCase() + phone.plan_tier.slice(1)}
+                              {phone.license_expires_at && (
+                                <span className="ml-1 text-emerald-600">
+                                  ({Math.max(0, Math.ceil((new Date(phone.license_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}d)
+                                </span>
+                              )}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border border-amber-200">
+                              No License
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-muted-foreground">
                           {phone.hub_server?.location || '-'}
                         </TableCell>
