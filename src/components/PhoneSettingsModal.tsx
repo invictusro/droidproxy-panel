@@ -944,8 +944,15 @@ export default function PhoneSettingsModal({
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
                           <p className="text-sm text-amber-800">No active license. Select a plan below to activate proxy features.</p>
+                          <button
+                            onClick={onDelete}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg border border-red-200"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Phone
+                          </button>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
