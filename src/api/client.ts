@@ -46,6 +46,13 @@ export const api = {
   logout: () => client.post('/auth/logout'),
   refreshToken: () => client.post('/auth/refresh'),
 
+  // Balance
+  getBalance: () => client.get('/me/balance'),
+  getBalanceTransactions: () => client.get('/me/balance/transactions'),
+
+  // Plans
+  getPlans: () => client.get('/plans'),
+
   // Phones
   getPhones: () => client.get('/phones'),
   createPhone: (data: { name: string; hub_server_id: string }) =>
@@ -84,6 +91,20 @@ export const api = {
     rotation_mode: 'off' | 'timed' | 'api';
     rotation_interval_minutes?: number;
   }) => client.put(`/phones/${phoneId}/rotation-settings`, data),
+
+  // Phone License
+  getPhoneLicense: (phoneId: string) => client.get(`/phones/${phoneId}/license`),
+  purchaseLicense: (phoneId: string, data: {
+    plan_tier: 'lite' | 'turbo' | 'nitro';
+    auto_extend?: boolean;
+  }) => client.post(`/phones/${phoneId}/license`, data),
+  updateLicense: (phoneId: string, data: { auto_extend?: boolean }) =>
+    client.put(`/phones/${phoneId}/license`, data),
+
+  // Phone Domain Blocking
+  getPhoneBlockedDomains: (phoneId: string) => client.get(`/phones/${phoneId}/blocked-domains`),
+  updatePhoneBlockedDomains: (phoneId: string, blockedDomains: string[]) =>
+    client.put(`/phones/${phoneId}/blocked-domains`, { blocked_domains: blockedDomains }),
 
   // Usage & Uptime (supports date range: start_date, end_date in YYYY-MM-DD format)
   getPhoneDataUsage: (phoneId: string, startDate?: string, endDate?: string) => {
@@ -168,6 +189,11 @@ export const api = {
   updateUserRole: (id: string, role: string) =>
     client.put(`/users/${id}/role`, { role }),
   deleteUser: (id: string) => client.delete(`/users/${id}`),
+  adjustUserBalance: (userId: string, data: {
+    amount: number;
+    type: 'credit' | 'debit';
+    description?: string;
+  }) => client.post(`/admin/users/${userId}/balance`, data),
 
   // Fleet Management (admin) - OTA Updates
   uploadHubAgentBinary: (file: File, version: string) => {

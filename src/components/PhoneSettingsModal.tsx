@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronDown, ChevronUp, ChevronLeft, Activity, Database, Globe, Download } from 'lucide-react';
+import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronLeft, ChevronRight, Activity, Database, Download, CreditCard, Smartphone, Battery, Cpu, Info, Settings, AlertTriangle, Calendar } from 'lucide-react';
 import { api } from '../api/client';
-import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType, DomainStats } from '../types';
+import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType, PhoneLicense, Plan } from '../types';
 
 type RotationMode = 'off' | 'timed' | 'api';
+type MainSection = 'overview' | 'license' | 'credentials' | 'rotation' | 'traffic' | 'uptime' | 'restrictions' | 'device' | 'actions';
+type TrafficSubTab = 'monthly' | 'daily';
+type DeviceSubTab = 'metrics' | 'info';
 
 interface DataUsage {
   phone_id: string;
@@ -45,29 +48,42 @@ export default function PhoneSettingsModal({
   isRotating,
   isRestarting
 }: Props) {
-  const [activeTab, setActiveTab] = useState<'credentials' | 'rotation' | 'usage' | 'access-logs' | 'actions'>('credentials');
+  // Auto-select license tab if phone has no license
+  const hasLicense = phone.has_active_license;
+  const [activeSection, setActiveSection] = useState<MainSection>(hasLicense ? 'overview' : 'license');
+  const [trafficSubTab, setTrafficSubTab] = useState<TrafficSubTab>('monthly');
+  const [deviceSubTab, setDeviceSubTab] = useState<DeviceSubTab>('metrics');
+
   const [credentials, setCredentials] = useState<ConnectionCredential[]>([]);
   const [rotationToken, setRotationToken] = useState<RotationToken | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
+  // License state
+  const [license, setLicense] = useState<PhoneLicense | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loadingLicense, setLoadingLicense] = useState(false);
+  const [purchasingLicense, setPurchasingLicense] = useState(false);
+
+  // Phone-level blocked domains
+  const [phoneBlockedDomains, setPhoneBlockedDomains] = useState<string[]>([]);
+  const [newPhoneDomainPattern, setNewPhoneDomainPattern] = useState('');
+  const [savingPhoneBlockedDomains, setSavingPhoneBlockedDomains] = useState(false);
+
   // Usage & Uptime state
   const [dataUsage, setDataUsage] = useState<DataUsage | null>(null);
   const [uptimeData, setUptimeData] = useState<UptimeData | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [usageDateRange, setUsageDateRange] = useState<'7d' | '30d' | '90d'>('30d');
-  const [uptimeDateRange, setUptimeDateRange] = useState<'today' | '7d' | '30d'>('30d');
-  const [selectedUptimeDay, setSelectedUptimeDay] = useState<string | null>(null); // For drill-down into specific day
-  const [selectedDayUptimeData, setSelectedDayUptimeData] = useState<UptimeData | null>(null);
-  const [loadingDayUptime, setLoadingDayUptime] = useState(false);
+  const [uptimeSelectedDate, setUptimeSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
 
   // Rotation settings state
   const [rotationMode, setRotationMode] = useState<RotationMode>('off');
   const [rotationInterval, setRotationInterval] = useState(30);
   const [savingRotation, setSavingRotation] = useState(false);
 
-  // Form state
+  // Form state for credentials
   const [formData, setFormData] = useState({
     name: '',
     auth_type: 'ip' as AuthType,
@@ -75,196 +91,46 @@ export default function PhoneSettingsModal({
     allowed_ip: '',
     username: '',
     password: '',
+    expires_at: '',
   });
 
-  // Blocked domains state
-  const [expandedBlockedDomains, setExpandedBlockedDomains] = useState<string | null>(null);
-  const [editingBlockedDomains, setEditingBlockedDomains] = useState<{ [credId: string]: string[] }>({});
-  const [newDomainPattern, setNewDomainPattern] = useState('');
-  const [savingBlockedDomains, setSavingBlockedDomains] = useState<string | null>(null);
-
   // Access Logs state
-  const [domainStats, setDomainStats] = useState<DomainStats[]>([]);
-  const [loadingDomainStats, setLoadingDomainStats] = useState(false);
   const [exportingLogs, setExportingLogs] = useState(false);
-  const [totalLogs, setTotalLogs] = useState(0);
-  // Date range for export - default 7 days, max 12 weeks back
   const [exportStartDate, setExportStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
     return d.toISOString().split('T')[0];
   });
-  const [exportEndDate, setExportEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const [exportEndDate, setExportEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     loadData();
   }, [phone.id]);
 
-  // Calculate date range based on selection
-  const getDateRange = (range: string): { start: string; end: string } => {
-    const today = new Date();
-    const end = today.toISOString().split('T')[0];
-    let start = end;
-
-    if (range === '7d') {
-      const d = new Date(today);
-      d.setDate(d.getDate() - 7);
-      start = d.toISOString().split('T')[0];
-    } else if (range === '30d') {
-      const d = new Date(today);
-      d.setDate(d.getDate() - 30);
-      start = d.toISOString().split('T')[0];
-    } else if (range === '90d') {
-      const d = new Date(today);
-      d.setDate(d.getDate() - 90);
-      start = d.toISOString().split('T')[0];
-    } else if (range === 'today') {
-      start = end;
-    }
-
-    return { start, end };
-  };
-
-  // Load usage data when usage tab is selected or date range changes
+  // Force license tab when phone has no license
   useEffect(() => {
-    if (activeTab === 'usage') {
+    if (!hasLicense && activeSection !== 'license') {
+      setActiveSection('license');
+    }
+  }, [hasLicense, activeSection]);
+
+  useEffect(() => {
+    if (activeSection === 'traffic' || activeSection === 'uptime') {
       loadUsageData();
-      setSelectedUptimeDay(null); // Reset drill-down when changing range
-      setSelectedDayUptimeData(null);
     }
-  }, [activeTab, usageDateRange, uptimeDateRange]);
+  }, [activeSection, usageDateRange, uptimeSelectedDate]);
 
-  // Load access logs data when access-logs tab is selected
   useEffect(() => {
-    if (activeTab === 'access-logs') {
-      loadDomainStats();
+    if (activeSection === 'license') {
+      loadLicenseData();
     }
-  }, [activeTab]);
+  }, [activeSection]);
 
-  const loadUsageData = async () => {
-    setLoadingUsage(true);
-    try {
-      const usageRange = getDateRange(usageDateRange);
-      const uptimeRange = getDateRange(uptimeDateRange);
-
-      const [usageRes, uptimeRes] = await Promise.all([
-        api.getPhoneDataUsage(phone.id, usageRange.start, usageRange.end),
-        api.getPhoneUptime(phone.id, uptimeRange.start, uptimeRange.end),
-      ]);
-      setDataUsage(usageRes.data);
-      setUptimeData(uptimeRes.data);
-    } catch (error) {
-      console.error('Failed to load usage data:', error);
+  useEffect(() => {
+    if (activeSection === 'restrictions') {
+      setPhoneBlockedDomains(phone.blocked_domains || []);
     }
-    setLoadingUsage(false);
-  };
-
-  const loadDomainStats = async () => {
-    setLoadingDomainStats(true);
-    try {
-      const [statsRes, logsRes] = await Promise.all([
-        api.getPhoneDomainStats(phone.id, { limit: 20 }),
-        api.getPhoneAccessLogs(phone.id, { limit: 1 }), // Just to get total count
-      ]);
-      setDomainStats(statsRes.data.stats || []);
-      setTotalLogs(logsRes.data.total || 0);
-    } catch (error) {
-      console.error('Failed to load domain stats:', error);
-    }
-    setLoadingDomainStats(false);
-  };
-
-  const exportLogsCSV = async () => {
-    setExportingLogs(true);
-    try {
-      // Fetch all logs for date range (paginate if needed)
-      let allLogs: any[] = [];
-      let offset = 0;
-      const limit = 1000;
-      let hasMore = true;
-
-      while (hasMore) {
-        const res = await api.getPhoneAccessLogs(phone.id, {
-          limit,
-          offset,
-          start_date: exportStartDate,
-          end_date: exportEndDate,
-        });
-        const logs = res.data.logs || [];
-        allLogs = allLogs.concat(logs);
-        hasMore = logs.length === limit;
-        offset += limit;
-      }
-
-      if (allLogs.length === 0) {
-        alert('No logs found for the selected date range.');
-        setExportingLogs(false);
-        return;
-      }
-
-      // Generate CSV
-      const headers = ['Timestamp', 'Domain', 'Port', 'Protocol', 'Client IP', 'Credential', 'Bytes In', 'Bytes Out', 'Duration (ms)', 'Blocked'];
-      const rows = allLogs.map(log => [
-        new Date(log.timestamp).toISOString(),
-        log.domain,
-        log.port,
-        log.protocol,
-        log.client_ip,
-        log.credential_name || '',
-        log.bytes_in,
-        log.bytes_out,
-        log.duration_ms,
-        log.blocked ? 'Yes' : 'No'
-      ]);
-
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      ].join('\n');
-
-      // Download file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `access-logs-${phone.name}-${exportStartDate}-to-${exportEndDate}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to export access logs:', error);
-      alert('Failed to export logs. Please try again.');
-    }
-    setExportingLogs(false);
-  };
-
-  // Get the earliest allowed date (12 weeks back - max retention)
-  const getMinExportDate = () => {
-    const d = new Date();
-    d.setDate(d.getDate() - (12 * 7)); // 12 weeks max
-    return d.toISOString().split('T')[0];
-  };
-
-  // Load hourly data for a specific day (drill-down)
-  const loadDayUptimeData = async (date: string) => {
-    setLoadingDayUptime(true);
-    setSelectedUptimeDay(date);
-    try {
-      const res = await api.getPhoneUptime(phone.id, date, date);
-      setSelectedDayUptimeData(res.data);
-    } catch (error) {
-      console.error('Failed to load day uptime data:', error);
-    }
-    setLoadingDayUptime(false);
-  };
-
-  const clearSelectedDay = () => {
-    setSelectedUptimeDay(null);
-    setSelectedDayUptimeData(null);
-  };
+  }, [activeSection, phone.blocked_domains]);
 
   const loadData = async () => {
     setLoading(true);
@@ -282,6 +148,81 @@ export default function PhoneSettingsModal({
       console.error('Failed to load phone settings:', error);
     }
     setLoading(false);
+  };
+
+  const loadLicenseData = async () => {
+    setLoadingLicense(true);
+    try {
+      const res = await api.getPhoneLicense(phone.id);
+      if (res.data.has_license) {
+        setLicense(res.data.license);
+      } else {
+        setLicense(null);
+      }
+      setPlans(res.data.plans || []);
+    } catch (error) {
+      console.error('Failed to load license:', error);
+    }
+    setLoadingLicense(false);
+  };
+
+  const handlePurchaseLicense = async (planTier: string) => {
+    if (!confirm(`Purchase ${planTier.toUpperCase()} plan for this phone?`)) return;
+    setPurchasingLicense(true);
+    try {
+      await api.purchaseLicense(phone.id, { plan_tier: planTier as any, auto_extend: false });
+      await loadLicenseData();
+    } catch (error: any) {
+      const msg = error.response?.data?.error || 'Failed to purchase license';
+      alert(msg);
+    }
+    setPurchasingLicense(false);
+  };
+
+  const handleToggleAutoExtend = async () => {
+    if (!license) return;
+    try {
+      await api.updateLicense(phone.id, { auto_extend: !license.auto_extend });
+      await loadLicenseData();
+    } catch (error) {
+      console.error('Failed to update license:', error);
+    }
+  };
+
+  const getDateRange = (range: string): { start: string; end: string } => {
+    const today = new Date();
+    const end = today.toISOString().split('T')[0];
+    let start = end;
+    if (range === '7d') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 7);
+      start = d.toISOString().split('T')[0];
+    } else if (range === '30d') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 30);
+      start = d.toISOString().split('T')[0];
+    } else if (range === '90d') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 90);
+      start = d.toISOString().split('T')[0];
+    }
+    return { start, end };
+  };
+
+  const loadUsageData = async () => {
+    setLoadingUsage(true);
+    try {
+      const usageRange = getDateRange(usageDateRange);
+      const [usageRes, uptimeRes] = await Promise.all([
+        api.getPhoneDataUsage(phone.id, usageRange.start, usageRange.end),
+        api.getPhoneUptime(phone.id, uptimeSelectedDate, uptimeSelectedDate),
+      ]);
+      setDataUsage(usageRes.data);
+      setUptimeData(uptimeRes.data);
+    } catch (error) {
+      console.error('Failed to load usage data:', error);
+    }
+    setLoadingUsage(false);
   };
 
   const handleSaveRotationSettings = async (mode: RotationMode, interval?: number) => {
@@ -312,9 +253,12 @@ export default function PhoneSettingsModal({
         data.username = formData.username;
         data.password = formData.password;
       }
+      if (formData.expires_at) {
+        data.expires_at = formData.expires_at;
+      }
       await api.createCredential(phone.id, data);
       setShowAddForm(false);
-      setFormData({ name: '', auth_type: 'ip', proxy_type: 'socks5', allowed_ip: '', username: '', password: '' });
+      setFormData({ name: '', auth_type: 'ip', proxy_type: 'socks5', allowed_ip: '', username: '', password: '', expires_at: '' });
       loadData();
     } catch (error) {
       console.error('Failed to create credential:', error);
@@ -340,49 +284,26 @@ export default function PhoneSettingsModal({
     }
   };
 
-  const handleToggleBlockedDomains = (credId: string, currentDomains: string[] | undefined) => {
-    if (expandedBlockedDomains === credId) {
-      setExpandedBlockedDomains(null);
-    } else {
-      setExpandedBlockedDomains(credId);
-      // Initialize editing state with current domains
-      setEditingBlockedDomains(prev => ({
-        ...prev,
-        [credId]: currentDomains || []
-      }));
-    }
-    setNewDomainPattern('');
-  };
-
-  const handleAddDomainPattern = (credId: string) => {
-    const pattern = newDomainPattern.trim();
+  // Phone-level domain blocking
+  const handleAddPhoneDomainPattern = () => {
+    const pattern = newPhoneDomainPattern.trim();
     if (!pattern) return;
-
-    setEditingBlockedDomains(prev => ({
-      ...prev,
-      [credId]: [...(prev[credId] || []), pattern]
-    }));
-    setNewDomainPattern('');
+    setPhoneBlockedDomains([...phoneBlockedDomains, pattern]);
+    setNewPhoneDomainPattern('');
   };
 
-  const handleRemoveDomainPattern = (credId: string, index: number) => {
-    setEditingBlockedDomains(prev => ({
-      ...prev,
-      [credId]: (prev[credId] || []).filter((_, i) => i !== index)
-    }));
+  const handleRemovePhoneDomainPattern = (index: number) => {
+    setPhoneBlockedDomains(phoneBlockedDomains.filter((_, i) => i !== index));
   };
 
-  const handleSaveBlockedDomains = async (credId: string) => {
-    setSavingBlockedDomains(credId);
+  const handleSavePhoneBlockedDomains = async () => {
+    setSavingPhoneBlockedDomains(true);
     try {
-      const domains = editingBlockedDomains[credId] || [];
-      await api.updateCredential(phone.id, credId, { blocked_domains: domains });
-      await loadData();
-      setExpandedBlockedDomains(null);
+      await api.updatePhoneBlockedDomains(phone.id, phoneBlockedDomains);
     } catch (error) {
       console.error('Failed to save blocked domains:', error);
     }
-    setSavingBlockedDomains(null);
+    setSavingPhoneBlockedDomains(false);
   };
 
   const handleRegenerateToken = async () => {
@@ -405,11 +326,10 @@ export default function PhoneSettingsModal({
     switch (type) {
       case 'socks5': return 'SOCKS5';
       case 'http': return 'HTTP';
-      case 'both': return 'Both'; // Legacy, no longer creatable
+      case 'both': return 'Both';
     }
   };
 
-  // Format bytes to human readable
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -418,1075 +338,862 @@ export default function PhoneSettingsModal({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Format date to readable string
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Generate connection strings for a credential
-  // Each credential has its own port
   const getConnectionStrings = (cred: ConnectionCredential) => {
-    // Use credential's DNS domain (per-credential DNS), fallback to hub server IP
     const serverHost = cred.proxy_domain || phone.hub_server_ip;
     const proxyPort = cred.port;
-
     const strings: { type: string; value: string }[] = [];
 
     if (cred.auth_type === 'userpass') {
       if (cred.proxy_type === 'socks5') {
-        strings.push({
-          type: 'SOCKS5',
-          value: `socks5://${cred.username}:${cred.password}@${serverHost}:${proxyPort}`
-        });
+        strings.push({ type: 'SOCKS5', value: `socks5://${cred.username}:${cred.password}@${serverHost}:${proxyPort}` });
       }
       if (cred.proxy_type === 'http') {
-        strings.push({
-          type: 'HTTP',
-          value: `http://${cred.username}:${cred.password}@${serverHost}:${proxyPort}`
-        });
+        strings.push({ type: 'HTTP', value: `http://${cred.username}:${cred.password}@${serverHost}:${proxyPort}` });
       }
     } else {
-      // IP whitelist - no auth in connection string
       if (cred.proxy_type === 'socks5') {
-        strings.push({
-          type: 'SOCKS5',
-          value: `socks5://${serverHost}:${proxyPort}`
-        });
+        strings.push({ type: 'SOCKS5', value: `socks5://${serverHost}:${proxyPort}` });
       }
       if (cred.proxy_type === 'http') {
-        strings.push({
-          type: 'HTTP',
-          value: `http://${serverHost}:${proxyPort}`
-        });
+        strings.push({ type: 'HTTP', value: `http://${serverHost}:${proxyPort}` });
       }
     }
-
     return strings;
   };
 
+  const exportLogsCSV = async () => {
+    setExportingLogs(true);
+    try {
+      let allLogs: any[] = [];
+      let offset = 0;
+      const limit = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const res = await api.getPhoneAccessLogs(phone.id, { limit, offset, start_date: exportStartDate, end_date: exportEndDate });
+        const logs = res.data.logs || [];
+        allLogs = allLogs.concat(logs);
+        hasMore = logs.length === limit;
+        offset += limit;
+      }
+
+      if (allLogs.length === 0) {
+        alert('No logs found for the selected date range.');
+        setExportingLogs(false);
+        return;
+      }
+
+      const headers = ['Timestamp', 'Domain', 'Port', 'Protocol', 'Client IP', 'Credential', 'Bytes In', 'Bytes Out', 'Duration (ms)', 'Blocked'];
+      const rows = allLogs.map(log => [
+        new Date(log.timestamp).toISOString(),
+        log.domain, log.port, log.protocol, log.client_ip, log.credential_name || '',
+        log.bytes_in, log.bytes_out, log.duration_ms, log.blocked ? 'Yes' : 'No'
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `access-logs-${phone.name}-${exportStartDate}-to-${exportEndDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export access logs:', error);
+      alert('Failed to export logs.');
+    }
+    setExportingLogs(false);
+  };
+
+  const getMinExportDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - (12 * 7));
+    return d.toISOString().split('T')[0];
+  };
+
+  // Generate 5-minute intervals for uptime display
+  const get5MinIntervals = () => {
+    const intervals: { time: string; status: 'online' | 'offline' | 'nodata' }[] = [];
+    // For now, we simulate based on hourly data. In production, backend would provide 5-min data.
+    if (uptimeData?.hourly) {
+      for (let hour = 0; hour < 24; hour++) {
+        const hourData = uptimeData.hourly.find(h => h.hour === hour);
+        for (let min = 0; min < 60; min += 5) {
+          const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+          if (!hourData) {
+            intervals.push({ time: timeStr, status: 'nodata' });
+          } else if (hourData.uptime >= 80) {
+            intervals.push({ time: timeStr, status: 'online' });
+          } else if (hourData.uptime > 0) {
+            // Partial uptime - simulate some offline periods
+            intervals.push({ time: timeStr, status: min < 30 && hourData.uptime < 50 ? 'offline' : 'online' });
+          } else {
+            intervals.push({ time: timeStr, status: 'offline' });
+          }
+        }
+      }
+    } else {
+      for (let hour = 0; hour < 24; hour++) {
+        for (let min = 0; min < 60; min += 5) {
+          intervals.push({ time: `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`, status: 'nodata' });
+        }
+      }
+    }
+    return intervals;
+  };
+
+  const navigateUptimeDate = (direction: 'prev' | 'next') => {
+    const d = new Date(uptimeSelectedDate);
+    d.setDate(d.getDate() + (direction === 'prev' ? -1 : 1));
+    setUptimeSelectedDate(d.toISOString().split('T')[0]);
+  };
+
+  const menuItems: { id: MainSection; label: string; icon: React.ReactNode }[] = [
+    { id: 'overview', label: 'Overview', icon: <Info className="w-4 h-4" /> },
+    { id: 'license', label: 'License', icon: <CreditCard className="w-4 h-4" /> },
+    { id: 'credentials', label: 'Credentials', icon: <Settings className="w-4 h-4" /> },
+    { id: 'rotation', label: 'Rotation', icon: <RotateCw className="w-4 h-4" /> },
+    { id: 'traffic', label: 'Traffic', icon: <Database className="w-4 h-4" /> },
+    { id: 'uptime', label: 'Uptime', icon: <Activity className="w-4 h-4" /> },
+    { id: 'restrictions', label: 'Restrictions', icon: <Shield className="w-4 h-4" /> },
+    { id: 'device', label: 'Device', icon: <Smartphone className="w-4 h-4" /> },
+    { id: 'actions', label: 'Actions', icon: <Power className="w-4 h-4" /> },
+  ];
+
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl shadow-zinc-200/50 w-full max-w-2xl max-h-[90vh] overflow-hidden border border-zinc-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 bg-gradient-to-b from-zinc-50 to-white">
-          <div>
-            <h2 className="text-xl font-semibold text-zinc-900">{phone.name}</h2>
-            <p className="text-sm text-zinc-500">
-              {phone.hub_server?.location}
-            </p>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 bg-gradient-to-b from-zinc-50 to-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${phone.status === 'online' ? 'bg-emerald-500' : phone.status === 'offline' ? 'bg-red-500' : 'bg-amber-500'}`} />
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-900">{phone.name}</h2>
+              <p className="text-sm text-zinc-500">{phone.hub_server?.location}</p>
+            </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
             <X className="w-5 h-5 text-zinc-500" />
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-zinc-200 bg-zinc-50/50">
-          <button
-            onClick={() => setActiveTab('credentials')}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'credentials'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white'
-                : 'text-zinc-500 hover:text-zinc-700'
-            }`}
-          >
-            Credentials
-          </button>
-          <button
-            onClick={() => setActiveTab('rotation')}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'rotation'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white'
-                : 'text-zinc-500 hover:text-zinc-700'
-            }`}
-          >
-            IP Rotation
-          </button>
-          <button
-            onClick={() => setActiveTab('usage')}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'usage'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white'
-                : 'text-zinc-500 hover:text-zinc-700'
-            }`}
-          >
-            Usage
-          </button>
-          <button
-            onClick={() => setActiveTab('access-logs')}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'access-logs'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white'
-                : 'text-zinc-500 hover:text-zinc-700'
-            }`}
-          >
-            Access Logs
-          </button>
-          <button
-            onClick={() => setActiveTab('actions')}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'actions'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white'
-                : 'text-zinc-500 hover:text-zinc-700'
-            }`}
-          >
-            Actions
-          </button>
-        </div>
+        {/* Main Content with Left Sidebar */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Sidebar */}
+          <div className="w-48 bg-zinc-50 border-r border-zinc-200 py-2 shrink-0 overflow-y-auto">
+            {menuItems.map((item) => {
+              const isLicenseItem = item.id === 'license';
+              const isLocked = !hasLicense && !isLicenseItem;
+              const needsAttention = !hasLicense && isLicenseItem;
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-            </div>
-          ) : (
-            <>
-              {/* Credentials Tab */}
-              {activeTab === 'credentials' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <p className="text-sm text-zinc-600">
-                      Add credentials to allow proxy connections. Without credentials, the proxy won't accept any connections.
-                    </p>
-                    <button
-                      onClick={() => setShowAddForm(true)}
-                      className="flex items-center px-3 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 shadow-sm hover:shadow transition-all"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add
-                    </button>
-                  </div>
-
-                  {/* Add Form */}
-                  {showAddForm && (
-                    <div className="mb-4 p-4 bg-zinc-50 rounded-xl border border-zinc-200 shadow-sm">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-zinc-700 mb-1">Name</label>
-                          <input
-                            type="text"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g., Home, Work"
-                            className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-zinc-700 mb-1">Auth Type</label>
-                          <div className="flex gap-4">
-                            <label className="flex items-center cursor-pointer">
-                              <input
-                                type="radio"
-                                value="ip"
-                                checked={formData.auth_type === 'ip'}
-                                onChange={() => setFormData({ ...formData, auth_type: 'ip' })}
-                                className="mr-2 text-emerald-600 focus:ring-emerald-500"
-                              />
-                              IP Whitelist
-                            </label>
-                            <label className="flex items-center cursor-pointer">
-                              <input
-                                type="radio"
-                                value="userpass"
-                                checked={formData.auth_type === 'userpass'}
-                                onChange={() => setFormData({ ...formData, auth_type: 'userpass' })}
-                                className="mr-2 text-emerald-600 focus:ring-emerald-500"
-                              />
-                              Username / Password
-                            </label>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-zinc-700 mb-1">Proxy Type</label>
-                          <select
-                            value={formData.proxy_type}
-                            onChange={(e) => setFormData({ ...formData, proxy_type: e.target.value as ProxyType })}
-                            className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                          >
-                            <option value="socks5">SOCKS5</option>
-                            <option value="http">HTTP</option>
-                          </select>
-                        </div>
-                        {formData.auth_type === 'ip' ? (
-                          <div className="col-span-2">
-                            <label className="block text-sm font-medium text-zinc-700 mb-1">Allowed IP</label>
-                            <input
-                              type="text"
-                              value={formData.allowed_ip}
-                              onChange={(e) => setFormData({ ...formData, allowed_ip: e.target.value })}
-                              placeholder="e.g., 192.168.1.100"
-                              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 mb-1">Username</label>
-                              <input
-                                type="text"
-                                value={formData.username}
-                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 mb-1">Password</label>
-                              <input
-                                type="text"
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex justify-end gap-2 mt-4">
-                        <button
-                          onClick={() => setShowAddForm(false)}
-                          className="px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleAddCredential}
-                          disabled={!formData.name || (formData.auth_type === 'ip' ? !formData.allowed_ip : !formData.username || !formData.password)}
-                          className="px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 shadow-sm transition-all"
-                        >
-                          Add Credential
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Credentials List */}
-                  {credentials.length === 0 ? (
-                    <div className="text-center py-8 text-zinc-500">
-                      No credentials yet. Add one to enable proxy connections.
-                    </div>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => !isLocked && setActiveSection(item.id)}
+                  disabled={isLocked}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                    isLocked
+                      ? 'text-zinc-300 cursor-not-allowed'
+                      : activeSection === item.id
+                        ? 'bg-emerald-100 text-emerald-700 font-medium border-r-2 border-emerald-600'
+                        : needsAttention
+                          ? 'text-red-600 bg-red-50 border-r-2 border-red-500 font-medium'
+                          : 'text-zinc-600 hover:bg-zinc-100'
+                  }`}
+                >
+                  {needsAttention ? (
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
                   ) : (
-                    <div className="space-y-3">
-                      {credentials.map((cred) => (
-                        <div
-                          key={cred.id}
-                          className={`p-4 border rounded-xl transition-all ${cred.is_active ? 'bg-white border-zinc-200 shadow-sm' : 'bg-zinc-50 border-zinc-100 opacity-60'}`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-zinc-900">{cred.name}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-md border ${
-                                cred.auth_type === 'ip' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-violet-50 text-violet-700 border-violet-200'
-                              }`}>
-                                {cred.auth_type === 'ip' ? 'IP' : 'User/Pass'}
-                              </span>
-                              <span className="text-xs px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200">
-                                {getProxyTypeLabel(cred.proxy_type)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleToggleCredential(cred)}
-                                className={`px-3 py-1 text-xs rounded-md border transition-colors ${
-                                  cred.is_active
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                    : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'
-                                }`}
-                              >
-                                {cred.is_active ? 'Active' : 'Disabled'}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCredential(cred.id)}
-                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          {/* Connection Strings */}
-                          <div className="space-y-1.5">
-                            {getConnectionStrings(cred).map((conn, idx) => (
-                              <div key={idx} className="flex items-center gap-2">
-                                <span className="text-xs text-zinc-400 w-12 font-medium">{conn.type}:</span>
-                                <code className="flex-1 text-xs bg-zinc-100 border border-zinc-200 px-2 py-1.5 rounded-md font-mono text-zinc-700 truncate">
-                                  {conn.value}
-                                </code>
-                                <button
-                                  onClick={() => copyToClipboard(conn.value, `${cred.id}-${conn.type}`)}
-                                  className="p-1.5 hover:bg-zinc-100 rounded-lg transition-colors"
-                                  title="Copy"
-                                >
-                                  {copied === `${cred.id}-${conn.type}` ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-500" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5 text-zinc-400" />
-                                  )}
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Blocked Domains Section */}
-                          <div className="mt-3 pt-3 border-t border-zinc-100">
-                            <button
-                              onClick={() => handleToggleBlockedDomains(cred.id, cred.blocked_domains)}
-                              className="flex items-center justify-between w-full text-left text-xs hover:bg-zinc-50 -mx-1 px-1 py-1 rounded transition-colors"
-                            >
-                              <span className="flex items-center gap-1.5 text-zinc-600">
-                                <Shield className="w-3.5 h-3.5" />
-                                <span className="font-medium">Blocked Domains</span>
-                                {cred.blocked_domains && cred.blocked_domains.length > 0 && (
-                                  <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px]">
-                                    {cred.blocked_domains.length}
-                                  </span>
-                                )}
-                              </span>
-                              {expandedBlockedDomains === cred.id ? (
-                                <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
-                              ) : (
-                                <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
-                              )}
-                            </button>
-
-                            {expandedBlockedDomains === cred.id && (
-                              <div className="mt-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
-                                <p className="text-[10px] text-zinc-500 mb-2">
-                                  Block domains for this credential. Patterns: <code className="bg-zinc-200 px-1 rounded">example.com</code>, <code className="bg-zinc-200 px-1 rounded">*.example.com</code>, <code className="bg-zinc-200 px-1 rounded">example.com:443</code>
-                                </p>
-
-                                {/* Current blocked domains */}
-                                {(editingBlockedDomains[cred.id] || []).length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5 mb-2">
-                                    {(editingBlockedDomains[cred.id] || []).map((pattern, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-200"
-                                      >
-                                        <span className="font-mono">{pattern}</span>
-                                        <button
-                                          onClick={() => handleRemoveDomainPattern(cred.id, idx)}
-                                          className="hover:bg-red-200 rounded p-0.5 transition-colors"
-                                        >
-                                          <X className="w-3 h-3" />
-                                        </button>
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Add new pattern */}
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={newDomainPattern}
-                                    onChange={(e) => setNewDomainPattern(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleAddDomainPattern(cred.id);
-                                      }
-                                    }}
-                                    placeholder="*.stripe.com"
-                                    className="flex-1 px-2 py-1.5 text-xs border border-zinc-200 rounded-md bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                                  />
-                                  <button
-                                    onClick={() => handleAddDomainPattern(cred.id)}
-                                    disabled={!newDomainPattern.trim()}
-                                    className="px-2 py-1.5 text-xs bg-zinc-200 text-zinc-700 rounded-md hover:bg-zinc-300 disabled:opacity-50 transition-colors"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-
-                                {/* Save button */}
-                                <div className="flex justify-end mt-3 gap-2">
-                                  <button
-                                    onClick={() => setExpandedBlockedDomains(null)}
-                                    className="px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-200 rounded-md transition-colors"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={() => handleSaveBlockedDomains(cred.id)}
-                                    disabled={savingBlockedDomains === cred.id}
-                                    className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                                  >
-                                    {savingBlockedDomains === cred.id ? 'Saving...' : 'Save'}
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    item.icon
                   )}
-                </div>
-              )}
-
-              {/* IP Rotation Tab */}
-              {activeTab === 'rotation' && (
-                <div>
-                  {phone.rotation_capability?.includes('not available') && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                      <p className="text-sm text-amber-800">
-                        IP rotation is not configured on this phone. Set DroidProxy as Digital Assistant to enable.
-                      </p>
-                      <p className="text-xs text-amber-600 mt-1">
-                        Settings → Apps → Default apps → Digital Assistant → DroidProxy
-                      </p>
-                    </div>
+                  {item.label}
+                  {needsAttention && activeSection !== 'license' && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   )}
+                </button>
+              );
+            })}
+          </div>
 
-                  <p className="text-sm text-zinc-600 mb-4">
-                    Configure how IP rotation works for this phone.
-                  </p>
+          {/* Content Area */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : (
+              <>
+                {/* Overview Section */}
+                {activeSection === 'overview' && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-zinc-900">Phone Overview</h3>
 
-                  {/* Rotation Mode Selection */}
-                  <div className="space-y-3 mb-6">
-                    {/* Off */}
-                    <label
-                      className={`flex items-start p-4 border rounded-xl cursor-pointer transition-all ${
-                        rotationMode === 'off'
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-zinc-200 hover:border-zinc-300'
-                      }`}
-                      onClick={() => handleSaveRotationSettings('off')}
-                    >
-                      <input
-                        type="radio"
-                        name="rotation_mode"
-                        checked={rotationMode === 'off'}
-                        onChange={() => {}}
-                        className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <div className="ml-3">
-                        <span className="font-medium text-zinc-900">Off</span>
-                        <p className="text-sm text-zinc-500 mt-0.5">No automatic rotation. Use manual rotation from Actions tab.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <p className="text-xs text-zinc-500 mb-1">Status</p>
+                        <p className={`text-lg font-semibold ${phone.status === 'online' ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {phone.status === 'online' ? 'Online' : phone.status === 'offline' ? 'Offline' : 'Pending'}
+                        </p>
                       </div>
-                    </label>
-
-                    {/* Timed */}
-                    <div
-                      className={`p-4 border rounded-xl transition-all ${
-                        rotationMode === 'timed'
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-zinc-200 hover:border-zinc-300'
-                      }`}
-                    >
-                      <label
-                        className="flex items-start cursor-pointer"
-                        onClick={() => rotationMode !== 'timed' && handleSaveRotationSettings('timed')}
-                      >
-                        <input
-                          type="radio"
-                          name="rotation_mode"
-                          checked={rotationMode === 'timed'}
-                          onChange={() => {}}
-                          className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-emerald-600" />
-                            <span className="font-medium text-zinc-900">Timed Rotation</span>
-                          </div>
-                          <p className="text-sm text-zinc-500 mt-0.5">Automatically rotate IP at a set interval.</p>
-                        </div>
-                      </label>
-                      {rotationMode === 'timed' && (
-                        <div className="mt-4 ml-7">
-                          <label className="block text-sm font-medium text-zinc-700 mb-2">
-                            Rotate every
-                          </label>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="range"
-                              min="2"
-                              max="120"
-                              value={rotationInterval}
-                              onChange={(e) => setRotationInterval(parseInt(e.target.value))}
-                              className="flex-1 accent-emerald-600"
-                            />
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min="2"
-                                max="120"
-                                value={rotationInterval}
-                                onChange={(e) => setRotationInterval(Math.max(2, Math.min(120, parseInt(e.target.value) || 2)))}
-                                className="w-16 px-2 py-1 border border-zinc-200 rounded-lg text-sm text-center"
-                              />
-                              <span className="text-sm text-zinc-500">min</span>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleSaveRotationSettings('timed', rotationInterval)}
-                            disabled={savingRotation}
-                            className="mt-3 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-                          >
-                            {savingRotation ? 'Saving...' : 'Save Interval'}
-                          </button>
-                        </div>
-                      )}
+                      <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <p className="text-xs text-zinc-500 mb-1">Plan</p>
+                        <p className={`text-lg font-semibold ${phone.plan_tier ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {phone.plan_tier ? phone.plan_tier.charAt(0).toUpperCase() + phone.plan_tier.slice(1) : 'No Plan'}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <p className="text-xs text-zinc-500 mb-1">Credentials</p>
+                        <p className="text-lg font-semibold text-zinc-900">{credentials.length}</p>
+                      </div>
+                      <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <p className="text-xs text-zinc-500 mb-1">Active Connections</p>
+                        <p className="text-lg font-semibold text-zinc-900">{phone.active_connections || 0}</p>
+                      </div>
                     </div>
 
-                    {/* API */}
-                    <div
-                      className={`p-4 border rounded-xl transition-all ${
-                        rotationMode === 'api'
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-zinc-200 hover:border-zinc-300'
-                      }`}
-                    >
-                      <label
-                        className="flex items-start cursor-pointer"
-                        onClick={() => rotationMode !== 'api' && handleSaveRotationSettings('api')}
-                      >
-                        <input
-                          type="radio"
-                          name="rotation_mode"
-                          checked={rotationMode === 'api'}
-                          onChange={() => {}}
-                          className="mt-1 text-emerald-600 focus:ring-emerald-500"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center gap-2">
-                            <Zap className="w-4 h-4 text-emerald-600" />
-                            <span className="font-medium text-zinc-900">API Rotation</span>
-                          </div>
-                          <p className="text-sm text-zinc-500 mt-0.5">Use an API endpoint to trigger rotation programmatically.</p>
+                    {/* License Warning */}
+                    {!phone.has_active_license && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-800">No Active License</p>
+                          <p className="text-xs text-amber-600 mt-1">This phone requires a license to use proxy features. Go to the License tab to purchase a plan.</p>
                         </div>
-                      </label>
-                      {rotationMode === 'api' && rotationToken && (
-                        <div className="mt-4 ml-7 space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-zinc-700 mb-1">API Endpoint</label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={rotationToken.endpoint}
-                                readOnly
-                                className="flex-1 px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-mono"
-                              />
-                              <button
-                                onClick={() => copyToClipboard(rotationToken.endpoint, 'endpoint')}
-                                className="px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
-                              >
-                                {copied === 'endpoint' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-zinc-400" />}
-                              </button>
-                            </div>
+                      </div>
+                    )}
+
+                    {/* Device Info Summary */}
+                    {phone.device_model && (
+                      <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <h4 className="text-sm font-medium text-zinc-700 mb-2">Device</h4>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-2 text-zinc-600">
+                            <Smartphone className="w-4 h-4" />
+                            <span>{phone.device_model}</span>
                           </div>
-                          {rotationToken.token && (
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 mb-1">Token (shown once)</label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={rotationToken.token}
-                                  readOnly
-                                  className="flex-1 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm font-mono"
-                                />
-                                <button
-                                  onClick={() => copyToClipboard(rotationToken.token!, 'token')}
-                                  className="px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
-                                >
-                                  {copied === 'token' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-zinc-400" />}
-                                </button>
-                              </div>
-                              <p className="text-xs text-amber-600 mt-1 font-medium">Save this token now. It won't be shown again.</p>
-                            </div>
+                          {phone.os_version && (
+                            <span className="text-zinc-400">{phone.os_version}</span>
                           )}
-                          <div className="bg-white p-4 rounded-xl border border-zinc-200">
-                            <p className="text-sm font-medium text-zinc-700 mb-2">Usage Example</p>
-                            <pre className="text-xs bg-zinc-900 text-emerald-400 p-3 rounded-lg overflow-x-auto">
-{`curl -X POST "${rotationToken.endpoint}"
-
-# Response
-{"message": "IP rotation initiated"}`}
-                            </pre>
-                          </div>
-                          <button
-                            onClick={handleRegenerateToken}
-                            className="flex items-center px-4 py-2 text-sm border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors"
-                          >
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Regenerate Token
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Usage Tab */}
-              {activeTab === 'usage' && (
-                <div>
-                  {loadingUsage ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {/* Uptime Section */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
-                            <Activity className="w-4 h-4" />
-                            Uptime
-                            {selectedUptimeDay && (
-                              <button
-                                onClick={clearSelectedDay}
-                                className="ml-2 px-2 py-0.5 text-[10px] bg-zinc-200 text-zinc-600 rounded hover:bg-zinc-300 transition-colors flex items-center gap-1"
-                              >
-                                <ChevronLeft className="w-3 h-3" />
-                                {uptimeDateRange === '7d' ? '7 Days' : '30 Days'}
-                              </button>
-                            )}
-                          </h3>
-                          {!selectedUptimeDay && (
-                            <div className="flex gap-1">
-                              {(['7d', '30d'] as const).map((period) => (
-                                <button
-                                  key={period}
-                                  onClick={() => setUptimeDateRange(period)}
-                                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                                    uptimeDateRange === period
-                                      ? 'bg-emerald-100 text-emerald-700 font-medium'
-                                      : 'text-zinc-500 hover:bg-zinc-100'
-                                  }`}
-                                >
-                                  {period === '7d' ? '7 Days' : '30 Days'}
-                                </button>
-                              ))}
+                          {phone.battery_level !== undefined && (
+                            <div className="flex items-center gap-1 text-zinc-600">
+                              <Battery className="w-4 h-4" />
+                              <span>{phone.battery_level}%</span>
+                              {phone.battery_charging && <Zap className="w-3 h-3 text-amber-500" />}
                             </div>
                           )}
                         </div>
-
-                        {/* Drill-down: Hourly view for selected day */}
-                        {selectedUptimeDay && (
-                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                            {loadingDayUptime ? (
-                              <div className="flex justify-center py-4">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
-                              </div>
-                            ) : selectedDayUptimeData ? (
-                              <>
-                                <div className="flex items-center justify-between mb-3">
-                                  <div>
-                                    <p className="text-xs text-zinc-500 mb-1">
-                                      {new Date(selectedUptimeDay + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                                    </p>
-                                    <p className="text-2xl font-bold text-zinc-900">
-                                      {selectedDayUptimeData.period_average.toFixed(1)}%
-                                    </p>
-                                  </div>
-                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                    selectedDayUptimeData.period_average >= 90 ? 'bg-emerald-100' :
-                                    selectedDayUptimeData.period_average >= 50 ? 'bg-amber-100' : 'bg-red-100'
-                                  }`}>
-                                    <Activity className={`w-6 h-6 ${
-                                      selectedDayUptimeData.period_average >= 90 ? 'text-emerald-600' :
-                                      selectedDayUptimeData.period_average >= 50 ? 'text-amber-600' : 'text-red-600'
-                                    }`} />
-                                  </div>
-                                </div>
-                                {selectedDayUptimeData.hourly && selectedDayUptimeData.hourly.length > 0 && (
-                                  <div className="pt-3 border-t border-zinc-200">
-                                    <p className="text-[10px] text-zinc-400 mb-2">Hourly breakdown (click bars for details)</p>
-                                    <div className="flex items-end gap-0.5 h-16">
-                                      {selectedDayUptimeData.hourly.map((h, idx) => (
-                                        <div key={idx} className="flex-1 flex flex-col items-center group relative">
-                                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                            {h.hour}:00 - {h.uptime.toFixed(0)}%
-                                          </div>
-                                          <div
-                                            className={`w-full rounded-t transition-all hover:opacity-80 ${
-                                              h.uptime >= 90 ? 'bg-emerald-500' :
-                                              h.uptime >= 50 ? 'bg-amber-500' :
-                                              h.uptime > 0 ? 'bg-red-500' : 'bg-zinc-300'
-                                            }`}
-                                            style={{ height: `${Math.max(2, h.uptime * 0.64)}px` }}
-                                          />
-                                        </div>
-                                      ))}
-                                    </div>
-                                    <div className="flex justify-between text-[8px] text-zinc-400 mt-1">
-                                      <span>00:00</span>
-                                      <span>06:00</span>
-                                      <span>12:00</span>
-                                      <span>18:00</span>
-                                      <span>23:00</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <p className="text-sm text-zinc-500 text-center py-4">No data for this day</p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Main uptime display (daily view) */}
-                        {!selectedUptimeDay && (
-                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <div className="flex items-center justify-between mb-3">
-                              <div>
-                                <p className="text-xs text-zinc-500 mb-1">
-                                  {uptimeDateRange === '7d' ? 'Last 7 Days Average' : 'Last 30 Days Average'}
-                                </p>
-                                <p className="text-3xl font-bold text-zinc-900">
-                                  {uptimeData ? `${uptimeData.period_average.toFixed(1)}%` : '-'}
-                                </p>
-                              </div>
-                              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                                !uptimeData ? 'bg-zinc-200' :
-                                uptimeData.period_average >= 90 ? 'bg-emerald-100' :
-                                uptimeData.period_average >= 50 ? 'bg-amber-100' : 'bg-red-100'
-                              }`}>
-                                <Activity className={`w-8 h-8 ${
-                                  !uptimeData ? 'text-zinc-400' :
-                                  uptimeData.period_average >= 90 ? 'text-emerald-600' :
-                                  uptimeData.period_average >= 50 ? 'text-amber-600' : 'text-red-600'
-                                }`} />
-                              </div>
-                            </div>
-
-                            {/* Daily breakdown - clickable bars */}
-                            {uptimeData && uptimeData.daily && uptimeData.daily.length > 0 && (
-                              <div className="pt-3 border-t border-zinc-200">
-                                <p className="text-[10px] text-zinc-400 mb-2">Daily breakdown (click a day to see hourly details)</p>
-                                <div className="flex items-end gap-1 h-16">
-                                  {uptimeData.daily.slice(0, uptimeDateRange === '7d' ? 7 : 30).reverse().map((day, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="flex-1 flex flex-col items-center group relative cursor-pointer"
-                                      onClick={() => loadDayUptimeData(day.date)}
-                                    >
-                                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                        {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: {day.uptime_percentage.toFixed(1)}%
-                                      </div>
-                                      <div
-                                        className={`w-full rounded-t transition-all hover:opacity-80 ${
-                                          day.uptime_percentage >= 90 ? 'bg-emerald-500' :
-                                          day.uptime_percentage >= 50 ? 'bg-amber-500' :
-                                          day.uptime_percentage > 0 ? 'bg-red-500' : 'bg-zinc-300'
-                                        }`}
-                                        style={{ height: `${Math.max(4, day.uptime_percentage * 0.64)}px` }}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                                {/* Date labels */}
-                                <div className="flex justify-between text-[8px] text-zinc-400 mt-1">
-                                  {uptimeDateRange === '7d' ? (
-                                    <>
-                                      <span>{uptimeData.daily.length > 0 ? new Date(uptimeData.daily[uptimeData.daily.length - 1]?.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
-                                      <span>Today</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span>30 days ago</span>
-                                      <span>15 days ago</span>
-                                      <span>Today</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* No data message */}
-                            {(!uptimeData || !uptimeData.daily || uptimeData.daily.length === 0) && (
-                              <div className="pt-3 border-t border-zinc-200">
-                                <p className="text-xs text-zinc-400 text-center py-4">
-                                  No uptime data yet. Data will appear once the phone reports status changes.
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
                       </div>
-
-                      {/* Data Usage Section */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-semibold text-zinc-700 flex items-center gap-2">
-                            <Database className="w-4 h-4" />
-                            Data Usage
-                          </h3>
-                          <div className="flex gap-1">
-                            {(['7d', '30d', '90d'] as const).map((period) => (
-                              <button
-                                key={period}
-                                onClick={() => setUsageDateRange(period)}
-                                className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                                  usageDateRange === period
-                                    ? 'bg-emerald-100 text-emerald-700 font-medium'
-                                    : 'text-zinc-500 hover:bg-zinc-100'
-                                }`}
-                              >
-                                {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : '90 Days'}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Period Total */}
-                        {dataUsage && (
-                          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 mb-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-emerald-600 mb-1">
-                                  {usageDateRange === '7d' ? 'Last 7 Days' : usageDateRange === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
-                                </p>
-                                <p className="text-2xl font-bold text-emerald-700">
-                                  {formatBytes(dataUsage.total.total)}
-                                </p>
-                              </div>
-                              <div className="text-right text-xs text-emerald-600">
-                                <div className="flex items-center gap-1 justify-end">
-                                  <ArrowDown className="w-3 h-3" />
-                                  <span>{formatBytes(dataUsage.total.bytes_in)}</span>
-                                </div>
-                                <div className="flex items-center gap-1 justify-end mt-1">
-                                  <ArrowUp className="w-3 h-3" />
-                                  <span>{formatBytes(dataUsage.total.bytes_out)}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Daily Usage Chart */}
-                        {dataUsage && dataUsage.daily && dataUsage.daily.length > 0 && (
-                          <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 mb-3">
-                            <p className="text-xs font-medium text-zinc-500 mb-2">Daily Usage</p>
-                            <div className="flex items-end gap-1 h-16">
-                              {dataUsage.daily.slice(0, usageDateRange === '7d' ? 7 : usageDateRange === '30d' ? 30 : 90).reverse().map((day, idx) => {
-                                const maxTotal = Math.max(...dataUsage.daily.map(d => d.total), 1);
-                                const height = (day.total / maxTotal) * 64;
-                                return (
-                                  <div key={idx} className="flex-1 flex flex-col items-center group cursor-pointer">
-                                    <div
-                                      className="w-full bg-emerald-500 rounded-t transition-all hover:bg-emerald-600"
-                                      style={{ height: `${Math.max(2, height)}px` }}
-                                      title={`${formatDate(day.date)}: ${formatBytes(day.total)}`}
-                                    />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Per-Credential Breakdown */}
-                        {credentials.length > 0 && (
-                          <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-                            <p className="text-xs font-medium text-zinc-500 mb-2">Per Credential (All Time)</p>
-                            <div className="space-y-2">
-                              {credentials.map((cred) => (
-                                <div key={cred.id} className="flex items-center justify-between py-2 border-b border-zinc-100 last:border-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className={`w-2 h-2 rounded-full ${cred.is_active ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
-                                    <span className="text-sm font-medium text-zinc-700">{cred.name}</span>
-                                    <span className="text-[10px] text-zinc-400">
-                                      ({cred.auth_type === 'ip' ? 'IP' : 'User/Pass'})
-                                    </span>
-                                  </div>
-                                  <span className="font-medium text-zinc-700 text-sm">
-                                    {formatBytes(cred.bandwidth_used)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {credentials.length === 0 && (
-                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                            <p className="text-sm text-amber-800">
-                              No credentials configured. Add credentials to start tracking usage.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Access Logs Tab */}
-              {activeTab === 'access-logs' && (
-                <div>
-                  {/* Export Section */}
-                  <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 mb-6">
-                    <h4 className="text-sm font-medium text-zinc-700 flex items-center gap-2 mb-3">
-                      <Download className="w-4 h-4" />
-                      Export Logs
-                    </h4>
-                    <div className="flex flex-wrap items-end gap-3">
-                      <div>
-                        <label className="block text-xs text-zinc-500 mb-1">From</label>
-                        <input
-                          type="date"
-                          value={exportStartDate}
-                          onChange={(e) => setExportStartDate(e.target.value)}
-                          min={getMinExportDate()}
-                          max={exportEndDate}
-                          className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-zinc-500 mb-1">To</label>
-                        <input
-                          type="date"
-                          value={exportEndDate}
-                          onChange={(e) => setExportEndDate(e.target.value)}
-                          min={exportStartDate}
-                          max={new Date().toISOString().split('T')[0]}
-                          className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-                        />
-                      </div>
-                      <button
-                        onClick={exportLogsCSV}
-                        disabled={exportingLogs || totalLogs === 0}
-                        className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50 shadow-sm transition-all"
-                      >
-                        {exportingLogs ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Exporting...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download CSV
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    )}
                   </div>
+                )}
 
-                  {/* Top Domains */}
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-zinc-700 mb-3 flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Top Domains
-                    </h4>
-                    {loadingDomainStats ? (
+                {/* License Section */}
+                {activeSection === 'license' && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-zinc-900">License</h3>
+
+                    {loadingLicense ? (
                       <div className="flex justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
                       </div>
-                    ) : domainStats.length === 0 ? (
-                      <div className="text-center py-6 text-zinc-500 bg-zinc-50 rounded-xl border border-zinc-200">
-                        <Globe className="w-10 h-10 mx-auto text-zinc-300 mb-2" />
-                        <p className="text-sm">No domain statistics yet.</p>
-                        <p className="text-xs text-zinc-400 mt-1">Stats will appear once proxy connections are made.</p>
+                    ) : license ? (
+                      <div className="space-y-4">
+                        <div className="p-6 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <p className="text-xs text-emerald-600 font-medium">Active Plan</p>
+                              <p className="text-2xl font-bold text-emerald-700">{license.plan_tier.toUpperCase()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-emerald-600">{license.days_remaining} days remaining</p>
+                              <p className="text-sm text-emerald-700">Expires {new Date(license.expires_at).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-emerald-200">
+                            <div>
+                              <p className="text-xs text-emerald-600">Speed</p>
+                              <p className="font-medium text-emerald-800">{license.limits.speed_limit_mbps} Mbit/s</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-emerald-600">Connections</p>
+                              <p className="font-medium text-emerald-800">{license.limits.max_connections}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-emerald-600">Log Retention</p>
+                              <p className="font-medium text-emerald-800">{license.limits.log_weeks} weeks</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <label className="flex items-center justify-between cursor-pointer">
+                            <div>
+                              <p className="text-sm font-medium text-zinc-700">Auto-Extend License</p>
+                              <p className="text-xs text-zinc-500 mt-0.5">Automatically renew from balance when license expires</p>
+                            </div>
+                            <button
+                              onClick={handleToggleAutoExtend}
+                              className={`w-12 h-6 rounded-full transition-colors ${license.auto_extend ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                            >
+                              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${license.auto_extend ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                            </button>
+                          </label>
+                        </div>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        {domainStats.map((stat, idx) => (
-                          <div
-                            key={stat.domain}
-                            className="p-3 bg-white border border-zinc-200 rounded-lg"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono text-zinc-400 w-5">{idx + 1}</span>
-                                <Globe className="w-4 h-4 text-emerald-500" />
-                                <span className="font-medium text-zinc-900 text-sm">{stat.domain}</span>
+                      <div className="space-y-4">
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                          <p className="text-sm text-amber-800">No active license. Select a plan below to activate proxy features.</p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                          {plans.map((plan) => (
+                            <div key={plan.tier} className="p-4 bg-white rounded-xl border-2 border-zinc-200 hover:border-emerald-400 transition-colors">
+                              <h4 className="text-lg font-bold text-zinc-900 mb-1">{plan.name}</h4>
+                              <p className="text-2xl font-bold text-emerald-600 mb-3">{plan.price_formatted}</p>
+                              <div className="space-y-1 text-sm text-zinc-600 mb-4">
+                                <p>{plan.limits.speed_limit_mbps} Mbit/s speed</p>
+                                <p>{plan.limits.max_connections} connections</p>
+                                <p>{plan.limits.log_weeks} weeks logs</p>
                               </div>
-                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">
-                                {stat.access_count} requests
-                              </span>
+                              <button
+                                onClick={() => handlePurchaseLicense(plan.tier)}
+                                disabled={purchasingLicense}
+                                className="w-full py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
+                              >
+                                {purchasingLicense ? 'Processing...' : 'Select'}
+                              </button>
                             </div>
-                            <div className="flex items-center gap-4 text-xs text-zinc-500 ml-7">
-                              <span className="flex items-center gap-1">
-                                <ArrowDown className="w-3 h-3" />
-                                {formatBytes(stat.bytes_in)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <ArrowUp className="w-3 h-3" />
-                                {formatBytes(stat.bytes_out)}
-                              </span>
-                              <span className="text-zinc-400">
-                                Last: {new Date(stat.last_access).toLocaleDateString()}
-                              </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Credentials Section */}
+                {activeSection === 'credentials' && (
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-zinc-900">Credentials</h3>
+                      <button
+                        onClick={() => setShowAddForm(true)}
+                        className="flex items-center px-3 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add
+                      </button>
+                    </div>
+
+                    {/* Add Form */}
+                    {showAddForm && (
+                      <div className="mb-4 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              placeholder="e.g., Home, Work"
+                              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Auth Type</label>
+                            <div className="flex gap-4">
+                              <label className="flex items-center cursor-pointer">
+                                <input type="radio" value="ip" checked={formData.auth_type === 'ip'} onChange={() => setFormData({ ...formData, auth_type: 'ip' })} className="mr-2" />
+                                IP Whitelist
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                <input type="radio" value="userpass" checked={formData.auth_type === 'userpass'} onChange={() => setFormData({ ...formData, auth_type: 'userpass' })} className="mr-2" />
+                                User/Pass
+                              </label>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Proxy Type</label>
+                            <select value={formData.proxy_type} onChange={(e) => setFormData({ ...formData, proxy_type: e.target.value as ProxyType })} className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm">
+                              <option value="socks5">SOCKS5</option>
+                              <option value="http">HTTP</option>
+                            </select>
+                          </div>
+                          {formData.auth_type === 'ip' ? (
+                            <div className="col-span-2">
+                              <label className="block text-sm font-medium text-zinc-700 mb-1">Allowed IP</label>
+                              <input type="text" value={formData.allowed_ip} onChange={(e) => setFormData({ ...formData, allowed_ip: e.target.value })} placeholder="192.168.1.100" className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm" />
+                            </div>
+                          ) : (
+                            <>
+                              <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1">Username</label>
+                                <input type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1">Password</label>
+                                <input type="text" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm" />
+                              </div>
+                            </>
+                          )}
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-zinc-700 mb-1">Expires At (optional)</label>
+                            <input type="datetime-local" value={formData.expires_at} onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })} className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-sm" />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <button onClick={() => setShowAddForm(false)} className="px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg">Cancel</button>
+                          <button onClick={handleAddCredential} disabled={!formData.name || (formData.auth_type === 'ip' ? !formData.allowed_ip : !formData.username || !formData.password)} className="px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">Add Credential</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Credentials List */}
+                    {credentials.length === 0 ? (
+                      <div className="text-center py-8 text-zinc-500">No credentials yet. Add one to enable proxy connections.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {credentials.map((cred) => (
+                          <div key={cred.id} className={`p-4 border rounded-xl ${cred.is_active ? 'bg-white border-zinc-200' : 'bg-zinc-50 border-zinc-100 opacity-60'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-zinc-900">{cred.name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-md ${cred.auth_type === 'ip' ? 'bg-emerald-50 text-emerald-700' : 'bg-violet-50 text-violet-700'}`}>
+                                  {cred.auth_type === 'ip' ? 'IP' : 'User/Pass'}
+                                </span>
+                                <span className="text-xs px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600">{getProxyTypeLabel(cred.proxy_type)}</span>
+                                {cred.expires_at && (
+                                  <span className="text-xs px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(cred.expires_at).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button onClick={() => handleToggleCredential(cred)} className={`px-3 py-1 text-xs rounded-md ${cred.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-zinc-100 text-zinc-600'}`}>
+                                  {cred.is_active ? 'Active' : 'Disabled'}
+                                </button>
+                                <button onClick={() => handleDeleteCredential(cred.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              {getConnectionStrings(cred).map((conn, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <span className="text-xs text-zinc-400 w-12 font-medium">{conn.type}:</span>
+                                  <code className="flex-1 text-xs bg-zinc-100 px-2 py-1.5 rounded-md font-mono text-zinc-700 truncate">{conn.value}</code>
+                                  <button onClick={() => copyToClipboard(conn.value, `${cred.id}-${conn.type}`)} className="p-1.5 hover:bg-zinc-100 rounded-lg">
+                                    {copied === `${cred.id}-${conn.type}` ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
+                                  </button>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Actions Tab */}
-              {activeTab === 'actions' && (
-                <div className="space-y-4">
-                  <div className="p-4 border border-zinc-200 rounded-xl bg-white shadow-sm">
-                    <h3 className="font-semibold text-zinc-900 mb-2">Rotate IP</h3>
-                    {phone.rotation_capability && !phone.rotation_capability.includes('not available') ? (
-                      <>
-                        <p className="text-sm text-zinc-600 mb-3">
-                          Toggle mobile data to get a new IP address from the carrier.
-                        </p>
-                        <button
-                          onClick={onRotateIP}
-                          disabled={phone.status !== 'online' || isRotating}
-                          className="flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 shadow-sm hover:shadow transition-all"
-                        >
-                          <RotateCw className={`w-4 h-4 mr-2 ${isRotating ? 'animate-spin' : ''}`} />
-                          {isRotating ? 'Rotating...' : 'Rotate IP'}
-                        </button>
-                        <p className="text-xs text-zinc-400 mt-2">{phone.rotation_capability}</p>
-                      </>
+                {/* Rotation Section */}
+                {activeSection === 'rotation' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-4">IP Rotation</h3>
+
+                    {phone.rotation_capability?.includes('not available') && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-amber-800">IP rotation not configured. Set DroidProxy as Digital Assistant to enable.</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      {(['off', 'timed', 'api'] as const).map((mode) => (
+                        <div key={mode} className={`p-4 border rounded-xl cursor-pointer transition-all ${rotationMode === mode ? 'border-emerald-500 bg-emerald-50' : 'border-zinc-200 hover:border-zinc-300'}`} onClick={() => mode !== rotationMode && handleSaveRotationSettings(mode)}>
+                          <div className="flex items-center gap-3">
+                            <input type="radio" checked={rotationMode === mode} readOnly className="text-emerald-600" />
+                            <div>
+                              <span className="font-medium text-zinc-900 capitalize">{mode === 'off' ? 'Off' : mode === 'timed' ? 'Timed' : 'API'}</span>
+                              <p className="text-sm text-zinc-500">{mode === 'off' ? 'Manual rotation only' : mode === 'timed' ? 'Rotate at set intervals' : 'Trigger via API endpoint'}</p>
+                            </div>
+                          </div>
+                          {mode === 'timed' && rotationMode === 'timed' && (
+                            <div className="mt-4 ml-7">
+                              <div className="flex items-center gap-3">
+                                <input type="range" min="2" max="120" value={rotationInterval} onChange={(e) => setRotationInterval(parseInt(e.target.value))} className="flex-1 accent-emerald-600" />
+                                <input type="number" min="2" max="120" value={rotationInterval} onChange={(e) => setRotationInterval(Math.max(2, Math.min(120, parseInt(e.target.value) || 2)))} className="w-16 px-2 py-1 border border-zinc-200 rounded-lg text-sm text-center" />
+                                <span className="text-sm text-zinc-500">min</span>
+                              </div>
+                              <button onClick={() => handleSaveRotationSettings('timed', rotationInterval)} disabled={savingRotation} className="mt-3 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                                {savingRotation ? 'Saving...' : 'Save Interval'}
+                              </button>
+                            </div>
+                          )}
+                          {mode === 'api' && rotationMode === 'api' && rotationToken && (
+                            <div className="mt-4 ml-7 space-y-3">
+                              <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1">API Endpoint</label>
+                                <div className="flex gap-2">
+                                  <input type="text" value={rotationToken.endpoint} readOnly className="flex-1 px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-mono" />
+                                  <button onClick={() => copyToClipboard(rotationToken.endpoint, 'endpoint')} className="px-3 py-2 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+                                    {copied === 'endpoint' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-zinc-400" />}
+                                  </button>
+                                </div>
+                              </div>
+                              <button onClick={handleRegenerateToken} className="flex items-center px-4 py-2 text-sm border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50">
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Regenerate Token
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Traffic Section */}
+                {activeSection === 'traffic' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-zinc-900">Traffic</h3>
+                      <div className="flex gap-1 bg-zinc-100 rounded-lg p-1">
+                        {(['monthly', 'daily'] as const).map((tab) => (
+                          <button key={tab} onClick={() => setTrafficSubTab(tab)} className={`px-3 py-1.5 text-sm rounded-md transition-colors ${trafficSubTab === tab ? 'bg-white shadow text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {loadingUsage ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                      </div>
                     ) : (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <p className="text-sm text-amber-800 mb-2">
-                          IP rotation is not available for this phone.
-                        </p>
-                        <p className="text-xs text-amber-600">
-                          To enable IP rotation, set DroidProxy as the Digital Assistant on the phone:
-                          <br />
-                          <span className="font-medium">Settings → Apps → Default apps → Digital Assistant</span>
-                        </p>
+                      <>
+                        {trafficSubTab === 'monthly' && dataUsage && (
+                          <div className="space-y-4">
+                            <div className="flex gap-1 mb-4">
+                              {(['7d', '30d', '90d'] as const).map((period) => (
+                                <button key={period} onClick={() => setUsageDateRange(period)} className={`px-2 py-1 text-xs rounded-md ${usageDateRange === period ? 'bg-emerald-100 text-emerald-700' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+                                  {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : '90 Days'}
+                                </button>
+                              ))}
+                            </div>
+
+                            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-emerald-600">Total</p>
+                                  <p className="text-2xl font-bold text-emerald-700">{formatBytes(dataUsage.total.total)}</p>
+                                </div>
+                                <div className="text-right text-xs text-emerald-600">
+                                  <div className="flex items-center gap-1 justify-end"><ArrowDown className="w-3 h-3" />{formatBytes(dataUsage.total.bytes_in)}</div>
+                                  <div className="flex items-center gap-1 justify-end mt-1"><ArrowUp className="w-3 h-3" />{formatBytes(dataUsage.total.bytes_out)}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Calendar-style monthly view */}
+                            <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                              <p className="text-xs font-medium text-zinc-500 mb-3">Daily Breakdown</p>
+                              <div className="grid grid-cols-7 gap-1">
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                  <div key={d} className="text-[10px] text-zinc-400 text-center py-1">{d}</div>
+                                ))}
+                                {dataUsage.daily.slice(-30).map((day, idx) => {
+                                  const maxTotal = Math.max(...dataUsage.daily.map(d => d.total), 1);
+                                  const intensity = day.total / maxTotal;
+                                  return (
+                                    <div key={idx} className={`aspect-square rounded-sm flex flex-col items-center justify-center text-[9px] cursor-pointer transition-all hover:ring-2 hover:ring-emerald-400 ${intensity > 0.7 ? 'bg-emerald-500 text-white' : intensity > 0.3 ? 'bg-emerald-300 text-emerald-900' : intensity > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-400'}`} title={`${formatDate(day.date)}: ${formatBytes(day.total)}`}>
+                                      <span>{new Date(day.date + 'T00:00:00').getDate()}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {trafficSubTab === 'daily' && dataUsage && (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                              <p className="text-xs font-medium text-zinc-500 mb-3">Hourly Usage (Today)</p>
+                              <div className="flex items-end gap-1 h-32">
+                                {Array.from({ length: 24 }, (_, hour) => {
+                                  // Simulated hourly data - in production, backend would provide this
+                                  const usage = Math.random() * 100000000;
+                                  const maxUsage = 100000000;
+                                  const height = (usage / maxUsage) * 100;
+                                  return (
+                                    <div key={hour} className="flex-1 flex flex-col items-center group">
+                                      <div className="w-full bg-emerald-500 rounded-t hover:bg-emerald-600 transition-colors" style={{ height: `${Math.max(4, height)}%` }} title={`${hour}:00 - ${formatBytes(usage)}`} />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="flex justify-between text-[8px] text-zinc-400 mt-1">
+                                <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+                              </div>
+                            </div>
+
+                            {/* Port filter would go here */}
+                            <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                              <p className="text-xs font-medium text-zinc-500 mb-2">Filter by Port</p>
+                              <select className="px-3 py-2 border border-zinc-200 rounded-lg text-sm w-full">
+                                <option value="">All Ports</option>
+                                {credentials.map(c => <option key={c.id} value={c.port}>Port {c.port} ({c.name})</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Uptime Section */}
+                {activeSection === 'uptime' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-4">Uptime</h3>
+
+                    {/* Date Picker */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <button onClick={() => navigateUptimeDate('prev')} className="p-2 hover:bg-zinc-100 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-zinc-400" />
+                        <input type="date" value={uptimeSelectedDate} onChange={(e) => setUptimeSelectedDate(e.target.value)} max={new Date().toISOString().split('T')[0]} className="px-3 py-2 border border-zinc-200 rounded-lg text-sm" />
+                      </div>
+                      <button onClick={() => navigateUptimeDate('next')} disabled={uptimeSelectedDate >= new Date().toISOString().split('T')[0]} className="p-2 hover:bg-zinc-100 rounded-lg disabled:opacity-50"><ChevronRight className="w-5 h-5" /></button>
+                    </div>
+
+                    {loadingUsage ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-sm font-medium text-zinc-700">{new Date(uptimeSelectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-500"></span> Online</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500"></span> Offline</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-zinc-200"></span> No data</span>
+                          </div>
+                        </div>
+
+                        {/* 5-minute intervals grid: 24 columns (hours) x 12 rows (5-min blocks) */}
+                        <div className="space-y-1">
+                          {Array.from({ length: 12 }, (_, row) => (
+                            <div key={row} className="flex gap-0.5">
+                              <span className="w-8 text-[8px] text-zinc-400 text-right pr-1">{String(row * 5).padStart(2, '0')}m</span>
+                              {Array.from({ length: 24 }, (_, hour) => {
+                                const intervals = get5MinIntervals();
+                                const idx = hour * 12 + row;
+                                const interval = intervals[idx];
+                                return (
+                                  <div
+                                    key={hour}
+                                    className={`flex-1 h-4 rounded-sm transition-colors ${
+                                      interval?.status === 'online' ? 'bg-emerald-500' :
+                                      interval?.status === 'offline' ? 'bg-red-500' : 'bg-zinc-200'
+                                    }`}
+                                    title={`${interval?.time}: ${interval?.status}`}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ))}
+                          <div className="flex gap-0.5 mt-2">
+                            <span className="w-8"></span>
+                            {Array.from({ length: 24 }, (_, h) => (
+                              <div key={h} className="flex-1 text-[8px] text-zinc-400 text-center">{String(h).padStart(2, '0')}</div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
-                  <div className="p-4 border border-zinc-200 rounded-xl bg-white shadow-sm">
-                    <h3 className="font-semibold text-zinc-900 mb-2">Restart Proxy</h3>
-                    <p className="text-sm text-zinc-600 mb-3">
-                      Restart the proxy service on the phone.
-                    </p>
-                    <button
-                      onClick={onRestart}
-                      disabled={isRestarting}
-                      className="flex items-center px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-50 shadow-sm hover:shadow transition-all"
-                    >
-                      <Power className={`w-4 h-4 mr-2 ${isRestarting ? 'animate-pulse' : ''}`} />
-                      {isRestarting ? 'Restarting...' : 'Restart Proxy'}
+                )}
+
+                {/* Restrictions Section */}
+                {activeSection === 'restrictions' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-4">Restrictions</h3>
+                    <p className="text-sm text-zinc-600 mb-4">Block domains for all credentials on this phone. Patterns: <code className="bg-zinc-200 px-1 rounded">example.com</code>, <code className="bg-zinc-200 px-1 rounded">*.example.com</code></p>
+
+                    {/* Current blocked domains */}
+                    {phoneBlockedDomains.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {phoneBlockedDomains.map((pattern, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">
+                            <span className="font-mono">{pattern}</span>
+                            <button onClick={() => handleRemovePhoneDomainPattern(idx)} className="hover:bg-red-200 rounded p-0.5"><X className="w-3 h-3" /></button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add new pattern */}
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        type="text"
+                        value={newPhoneDomainPattern}
+                        onChange={(e) => setNewPhoneDomainPattern(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddPhoneDomainPattern()}
+                        placeholder="*.stripe.com"
+                        className="flex-1 px-3 py-2 border border-zinc-200 rounded-lg text-sm"
+                      />
+                      <button onClick={handleAddPhoneDomainPattern} disabled={!newPhoneDomainPattern.trim()} className="px-4 py-2 bg-zinc-200 text-zinc-700 rounded-lg hover:bg-zinc-300 disabled:opacity-50">
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <button onClick={handleSavePhoneBlockedDomains} disabled={savingPhoneBlockedDomains} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                      {savingPhoneBlockedDomains ? 'Saving...' : 'Save Restrictions'}
                     </button>
                   </div>
-                  <div className="p-4 border border-red-200 rounded-xl bg-red-50">
-                    <h3 className="font-semibold text-red-800 mb-2">Danger Zone</h3>
-                    <p className="text-sm text-red-600 mb-3">
-                      Delete this phone. This action cannot be undone.
-                    </p>
-                    <button
-                      onClick={onDelete}
-                      className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-sm hover:shadow transition-all"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Phone
-                    </button>
+                )}
+
+                {/* Device Section */}
+                {activeSection === 'device' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-zinc-900">Device</h3>
+                      <div className="flex gap-1 bg-zinc-100 rounded-lg p-1">
+                        {(['metrics', 'info'] as const).map((tab) => (
+                          <button key={tab} onClick={() => setDeviceSubTab(tab)} className={`px-3 py-1.5 text-sm rounded-md transition-colors ${deviceSubTab === tab ? 'bg-white shadow text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {deviceSubTab === 'metrics' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Battery className="w-5 h-5 text-emerald-600" />
+                            <span className="text-sm font-medium text-zinc-700">Battery</span>
+                          </div>
+                          <p className="text-2xl font-bold text-zinc-900">{phone.battery_level ?? '--'}%</p>
+                          <div className="flex items-center gap-2 mt-1 text-sm text-zinc-500">
+                            {phone.battery_charging && <span className="flex items-center gap-1 text-amber-600"><Zap className="w-3 h-3" /> Charging</span>}
+                            {phone.battery_health && <span>Health: {phone.battery_health}</span>}
+                          </div>
+                          {phone.battery_temp && <p className="text-xs text-zinc-400 mt-1">Temperature: {phone.battery_temp}°C</p>}
+                        </div>
+
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Cpu className="w-5 h-5 text-violet-600" />
+                            <span className="text-sm font-medium text-zinc-700">Memory</span>
+                          </div>
+                          {phone.ram_total_mb ? (
+                            <>
+                              <p className="text-2xl font-bold text-zinc-900">{Math.round((phone.ram_used_mb || 0) / (phone.ram_total_mb || 1) * 100)}%</p>
+                              <p className="text-sm text-zinc-500">{formatBytes((phone.ram_used_mb || 0) * 1024 * 1024)} / {formatBytes((phone.ram_total_mb || 0) * 1024 * 1024)}</p>
+                            </>
+                          ) : (
+                            <p className="text-2xl font-bold text-zinc-400">--</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {deviceSubTab === 'info' && (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <p className="text-xs text-zinc-500 mb-1">Model</p>
+                          <p className="text-lg font-medium text-zinc-900">{phone.device_model || 'Unknown'}</p>
+                        </div>
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <p className="text-xs text-zinc-500 mb-1">Operating System</p>
+                          <p className="text-lg font-medium text-zinc-900">{phone.os_version || 'Unknown'}</p>
+                        </div>
+                        {phone.sim_carrier && (
+                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                            <p className="text-xs text-zinc-500 mb-1">Carrier</p>
+                            <p className="text-lg font-medium text-zinc-900">{phone.sim_carrier} {phone.sim_country && `(${phone.sim_country})`}</p>
+                          </div>
+                        )}
+                        {phone.metrics_updated_at && (
+                          <p className="text-xs text-zinc-400">Last updated: {new Date(phone.metrics_updated_at).toLocaleString()}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </>
-          )}
+                )}
+
+                {/* Actions Section */}
+                {activeSection === 'actions' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-4">Actions</h3>
+
+                    <div className="p-4 border border-zinc-200 rounded-xl bg-white">
+                      <h4 className="font-semibold text-zinc-900 mb-2">Rotate IP</h4>
+                      {phone.rotation_capability && !phone.rotation_capability.includes('not available') ? (
+                        <>
+                          <p className="text-sm text-zinc-600 mb-3">Toggle mobile data to get a new IP address.</p>
+                          <button onClick={onRotateIP} disabled={phone.status !== 'online' || isRotating} className="flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                            <RotateCw className={`w-4 h-4 mr-2 ${isRotating ? 'animate-spin' : ''}`} />
+                            {isRotating ? 'Rotating...' : 'Rotate IP'}
+                          </button>
+                        </>
+                      ) : (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <p className="text-sm text-amber-800">IP rotation not available. Set DroidProxy as Digital Assistant.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4 border border-zinc-200 rounded-xl bg-white">
+                      <h4 className="font-semibold text-zinc-900 mb-2">Restart Proxy</h4>
+                      <p className="text-sm text-zinc-600 mb-3">Restart the proxy service on the phone.</p>
+                      <button onClick={onRestart} disabled={isRestarting} className="flex items-center px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-50">
+                        <Power className={`w-4 h-4 mr-2 ${isRestarting ? 'animate-pulse' : ''}`} />
+                        {isRestarting ? 'Restarting...' : 'Restart Proxy'}
+                      </button>
+                    </div>
+
+                    <div className="p-4 border border-zinc-200 rounded-xl bg-white">
+                      <h4 className="font-semibold text-zinc-900 mb-2">Export Logs</h4>
+                      <div className="flex items-end gap-3">
+                        <div>
+                          <label className="block text-xs text-zinc-500 mb-1">From</label>
+                          <input type="date" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} min={getMinExportDate()} max={exportEndDate} className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-500 mb-1">To</label>
+                          <input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} min={exportStartDate} max={new Date().toISOString().split('T')[0]} className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg" />
+                        </div>
+                        <button onClick={exportLogsCSV} disabled={exportingLogs} className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                          {exportingLogs ? 'Exporting...' : <><Download className="w-4 h-4 mr-2" /> Export CSV</>}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-4 border border-red-200 rounded-xl bg-red-50">
+                      <h4 className="font-semibold text-red-800 mb-2">Danger Zone</h4>
+                      <p className="text-sm text-red-600 mb-3">Delete this phone. This cannot be undone.</p>
+                      <button onClick={onDelete} className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Phone
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

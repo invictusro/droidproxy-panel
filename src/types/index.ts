@@ -4,6 +4,7 @@ export interface User {
   name: string;
   picture: string;
   role: 'user' | 'admin';
+  balance: number; // Balance in cents
   created_at: string;
 }
 
@@ -52,6 +53,9 @@ export interface CredentialSummary {
   port?: number;
 }
 
+// Plan tier types
+export type PlanTier = 'lite' | 'turbo' | 'nitro';
+
 // Phone data from API (without real-time status)
 export interface Phone {
   id: string;
@@ -63,7 +67,30 @@ export interface Phone {
   first_credential?: CredentialSummary;
   sim_country?: string;  // ISO country code (e.g., "US", "GB")
   sim_carrier?: string;  // Carrier name
-  log_retention_weeks?: number; // Access log retention (1-12 weeks)
+  log_retention_weeks?: number; // Access log retention (derived from plan)
+
+  // Plan/License fields
+  plan_tier?: PlanTier;
+  license_expires_at?: string;
+  license_auto_extend?: boolean;
+  speed_limit_mbps?: number;
+  max_connections?: number;
+  has_active_license?: boolean;
+
+  // Domain blocking (phone level)
+  blocked_domains?: string[];
+
+  // Device metrics
+  battery_level?: number;
+  battery_health?: string;
+  battery_charging?: boolean;
+  battery_temp?: number;
+  ram_used_mb?: number;
+  ram_total_mb?: number;
+  device_model?: string;
+  os_version?: string;
+  metrics_updated_at?: string;
+
   created_at: string;
 }
 
@@ -195,4 +222,55 @@ export interface AccessLogFilter {
   blocked?: boolean;
   limit?: number;
   offset?: number;
+}
+
+// Balance & Transactions
+export interface BalanceResponse {
+  balance: number;
+  balance_formatted: string;
+  updated_at?: string;
+}
+
+export type TransactionType = 'credit' | 'debit';
+export type TransactionReason = 'license_purchase' | 'license_renewal' | 'admin_credit' | 'admin_debit' | 'refund';
+
+export interface BalanceTransaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  amount_delta: number; // Positive or negative based on type
+  reason: TransactionReason;
+  reference_id?: string;
+  description: string;
+  created_at: string;
+}
+
+// License
+export type LicenseStatus = 'active' | 'expired' | 'cancelled';
+
+export interface PlanLimits {
+  speed_limit_mbps: number;
+  max_connections: number;
+  log_weeks: number;
+}
+
+export interface PhoneLicense {
+  id: string;
+  phone_id: string;
+  plan_tier: PlanTier;
+  price_paid: number;
+  started_at: string;
+  expires_at: string;
+  auto_extend: boolean;
+  status: LicenseStatus;
+  days_remaining: number;
+  limits: PlanLimits;
+}
+
+export interface Plan {
+  tier: PlanTier;
+  name: string;
+  price_cents: number;
+  price_formatted: string;
+  limits: PlanLimits;
 }
