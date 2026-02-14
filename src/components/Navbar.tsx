@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Smartphone, Server, Users, LogOut } from 'lucide-react';
+import { Smartphone, Server, Users, LogOut, Download } from 'lucide-react';
+import APKDownloadModal from './APKDownloadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,6 +26,7 @@ interface NavbarProps {
 export default function Navbar({ user, onLogout }: NavbarProps) {
   const location = useLocation();
   const isAdmin = user?.role === 'admin';
+  const [showAPKModal, setShowAPKModal] = useState(false);
 
   const navItems = [
     { path: '/phones', label: 'Phones', icon: Smartphone },
@@ -63,6 +66,17 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                   </Link>
                 );
               })}
+
+              {/* Download APK Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAPKModal(true)}
+                className="gap-2 text-muted-foreground hover:text-foreground hover:bg-accent"
+              >
+                <Download className="w-4 h-4" />
+                Download APK
+              </Button>
             </div>
           </div>
 
@@ -111,6 +125,9 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
           )}
         </div>
       </div>
+
+      {/* APK Download Modal */}
+      <APKDownloadModal isOpen={showAPKModal} onClose={() => setShowAPKModal(false)} />
     </nav>
   );
 }

@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { X, Smartphone, KeyRound, Download } from 'lucide-react';
 import { QRCode } from 'react-qrcode-logo';
+import APKDownloadModal from './APKDownloadModal';
 
 interface QRCodeModalProps {
   isOpen: boolean;
@@ -10,6 +12,8 @@ interface QRCodeModalProps {
 }
 
 export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }: QRCodeModalProps) {
+  const [showAPKModal, setShowAPKModal] = useState(false);
+
   if (!isOpen) return null;
 
   return (
@@ -66,15 +70,13 @@ export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }:
           {/* Download Link */}
           <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
             <span>Don't have the app?</span>
-            <a
-              href="/apk"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setShowAPKModal(true)}
               className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium"
             >
               <Download className="w-4 h-4" />
               Download APK
-            </a>
+            </button>
           </div>
         </div>
 
@@ -87,6 +89,9 @@ export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }:
           </button>
         </div>
       </div>
+
+      {/* APK Download Modal */}
+      <APKDownloadModal isOpen={showAPKModal} onClose={() => setShowAPKModal(false)} />
     </div>
   );
 }
