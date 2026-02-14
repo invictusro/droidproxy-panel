@@ -709,6 +709,17 @@ export default function PhoneSettingsModal({
                                       <span className="text-zinc-400 line-through">Domain blocking</span>
                                     </div>
                                   )}
+                                  {plan.tier === 'nitro' ? (
+                                    <div className="flex items-center gap-2">
+                                      <Cpu className="w-4 h-4 text-indigo-500" />
+                                      <span className="text-zinc-700">Reselling API</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <Cpu className="w-4 h-4 text-zinc-300" />
+                                      <span className="text-zinc-400 line-through">Reselling API</span>
+                                    </div>
+                                  )}
                                 </div>
 
                                 <button
