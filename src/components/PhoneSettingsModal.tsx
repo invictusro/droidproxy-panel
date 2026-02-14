@@ -72,11 +72,19 @@ export default function PhoneSettingsModal({
   const [savingPhoneBlockedDomains, setSavingPhoneBlockedDomains] = useState(false);
 
   // Usage & Uptime state
+  // Helper to get date in local timezone as YYYY-MM-DD
+  const getLocalDateString = (date: Date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [dataUsage, setDataUsage] = useState<DataUsage | null>(null);
   const [uptimeData, setUptimeData] = useState<UptimeData | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [usageDateRange, setUsageDateRange] = useState<'7d' | '30d' | '90d'>('30d');
-  const [uptimeSelectedDate, setUptimeSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [uptimeSelectedDate, setUptimeSelectedDate] = useState<string>(() => getLocalDateString());
 
   // Rotation settings state
   const [rotationMode, setRotationMode] = useState<RotationMode>('off');
@@ -110,9 +118,9 @@ export default function PhoneSettingsModal({
   const [exportStartDate, setExportStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
+    return getLocalDateString(d);
   });
-  const [exportEndDate, setExportEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [exportEndDate, setExportEndDate] = useState(() => getLocalDateString());
 
   useEffect(() => {
     loadData();
@@ -222,20 +230,20 @@ export default function PhoneSettingsModal({
 
   const getDateRange = (range: string): { start: string; end: string } => {
     const today = new Date();
-    const end = today.toISOString().split('T')[0];
+    const end = getLocalDateString(today);
     let start = end;
     if (range === '7d') {
       const d = new Date(today);
       d.setDate(d.getDate() - 7);
-      start = d.toISOString().split('T')[0];
+      start = getLocalDateString(d);
     } else if (range === '30d') {
       const d = new Date(today);
       d.setDate(d.getDate() - 30);
-      start = d.toISOString().split('T')[0];
+      start = getLocalDateString(d);
     } else if (range === '90d') {
       const d = new Date(today);
       d.setDate(d.getDate() - 90);
-      start = d.toISOString().split('T')[0];
+      start = getLocalDateString(d);
     }
     return { start, end };
   };
@@ -446,7 +454,7 @@ export default function PhoneSettingsModal({
   const getMinExportDate = () => {
     const d = new Date();
     d.setDate(d.getDate() - (12 * 7));
-    return d.toISOString().split('T')[0];
+    return getLocalDateString(d);
   };
 
   // Generate 5-minute intervals for uptime display
@@ -459,13 +467,12 @@ export default function PhoneSettingsModal({
         for (let min = 0; min < 60; min += 5) {
           const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
           if (!hourData || hourData.uptime === 0) {
-            // No data or 0 uptime means we don't have tracking info - show as no data, not offline
+            // No data or 0 uptime means we don't have tracking info - show as no data
             intervals.push({ time: timeStr, status: 'nodata' });
-          } else if (hourData.uptime >= 80) {
-            intervals.push({ time: timeStr, status: 'online' });
           } else {
-            // Partial uptime - mix of online/offline based on percentage
-            intervals.push({ time: timeStr, status: min < 30 && hourData.uptime < 50 ? 'offline' : 'online' });
+            // Any uptime > 0 means we have data showing the phone was online (at least partially)
+            // Don't simulate offline - only show offline when we have explicit confirmation
+            intervals.push({ time: timeStr, status: 'online' });
           }
         }
       }
@@ -1130,9 +1137,9 @@ export default function PhoneSettingsModal({
                       <button onClick={() => navigateUptimeDate('prev')} className="p-2 hover:bg-zinc-100 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-zinc-400" />
-                        <input type="date" value={uptimeSelectedDate} onChange={(e) => setUptimeSelectedDate(e.target.value)} max={new Date().toISOString().split('T')[0]} className="px-3 py-2 border border-zinc-200 rounded-lg text-sm" />
+                        <input type="date" value={uptimeSelectedDate} onChange={(e) => setUptimeSelectedDate(e.target.value)} max={getLocalDateString()} className="px-3 py-2 border border-zinc-200 rounded-lg text-sm" />
                       </div>
-                      <button onClick={() => navigateUptimeDate('next')} disabled={uptimeSelectedDate >= new Date().toISOString().split('T')[0]} className="p-2 hover:bg-zinc-100 rounded-lg disabled:opacity-50"><ChevronRight className="w-5 h-5" /></button>
+                      <button onClick={() => navigateUptimeDate('next')} disabled={uptimeSelectedDate >= getLocalDateString()} className="p-2 hover:bg-zinc-100 rounded-lg disabled:opacity-50"><ChevronRight className="w-5 h-5" /></button>
                     </div>
 
                     {loadingUsage ? (
@@ -1333,7 +1340,7 @@ export default function PhoneSettingsModal({
                         </div>
                         <div>
                           <label className="block text-xs text-zinc-500 mb-1">To</label>
-                          <input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} min={exportStartDate} max={new Date().toISOString().split('T')[0]} className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg" />
+                          <input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} min={exportStartDate} max={getLocalDateString()} className="px-3 py-1.5 text-sm border border-zinc-200 rounded-lg" />
                         </div>
                         <button onClick={exportLogsCSV} disabled={exportingLogs} className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50">
                           {exportingLogs ? 'Exporting...' : <><Download className="w-4 h-4 mr-2" /> Export CSV</>}
