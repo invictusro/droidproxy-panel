@@ -609,7 +609,7 @@ export default function PhoneSettingsModal({
                       <div className="flex justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
                       </div>
-                    ) : license ? (
+                    ) : license && license.status === 'active' ? (
                       <div className="space-y-4">
                         <div className="p-6 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
                           <div className="flex items-center justify-between mb-4">
@@ -651,6 +651,66 @@ export default function PhoneSettingsModal({
                               <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${license.auto_extend ? 'translate-x-6' : 'translate-x-0.5'}`} />
                             </button>
                           </label>
+                        </div>
+                      </div>
+                    ) : license && license.status === 'expired' ? (
+                      /* Expired License */
+                      <div className="space-y-4">
+                        <div className="p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-xl border border-red-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <p className="text-xs text-red-600 font-medium">Expired Plan</p>
+                              <p className="text-2xl font-bold text-red-700">{license.plan_tier.toUpperCase()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-red-600">Expired</p>
+                              <p className="text-sm text-red-700">{new Date(license.expires_at).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-red-200 mb-4">
+                            <div>
+                              <p className="text-xs text-red-600">Speed</p>
+                              <p className="font-medium text-red-800">{license.limits.speed_limit_mbps} Mbit/s</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-red-600">Connections</p>
+                              <p className="font-medium text-red-800">{license.limits.max_connections}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-red-600">Log Retention</p>
+                              <p className="font-medium text-red-800">{license.limits.log_weeks} weeks</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handlePurchaseLicense(license.plan_tier)}
+                            disabled={purchasingLicense}
+                            className="w-full py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {purchasingLicense ? 'Processing...' : `Extend ${license.plan_tier.toUpperCase()} Plan`}
+                          </button>
+                        </div>
+
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                          <p className="text-sm text-zinc-600 mb-2">Or switch to a different plan:</p>
+                          <div className="flex gap-2">
+                            {plans.filter(p => p.tier !== license.plan_tier).map((plan) => (
+                              <button
+                                key={plan.tier}
+                                onClick={() => handlePurchaseLicense(plan.tier)}
+                                disabled={purchasingLicense}
+                                className="flex-1 py-2 px-3 bg-white border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-50"
+                              >
+                                {plan.name} ({plan.price_formatted})
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                          <p className="text-sm text-amber-800">
+                            <strong>Note:</strong> Your proxy credentials have been disabled. Extend your license to re-enable them.
+                            Phone data will be deleted in 14 days if not renewed.
+                          </p>
                         </div>
                       </div>
                     ) : (
