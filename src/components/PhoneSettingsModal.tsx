@@ -654,24 +654,70 @@ export default function PhoneSettingsModal({
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
-                          {plans.map((plan) => (
-                            <div key={plan.tier} className="p-4 bg-white rounded-xl border-2 border-zinc-200 hover:border-emerald-400 transition-colors">
-                              <h4 className="text-lg font-bold text-zinc-900 mb-1">{plan.name}</h4>
-                              <p className="text-2xl font-bold text-emerald-600 mb-3">{plan.price_formatted}</p>
-                              <div className="space-y-1 text-sm text-zinc-600 mb-4">
-                                <p>{plan.limits.speed_limit_mbps} Mbit/s speed</p>
-                                <p>{plan.limits.max_connections} connections</p>
-                                <p>{plan.limits.log_weeks} weeks logs</p>
-                              </div>
-                              <button
-                                onClick={() => handlePurchaseLicense(plan.tier)}
-                                disabled={purchasingLicense}
-                                className="w-full py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
+                          {plans.map((plan) => {
+                            const isPopular = plan.tier === 'turbo';
+                            const planDescriptions: Record<string, string> = {
+                              lite: 'Basic browsing & light usage',
+                              turbo: 'Streaming & daily use',
+                              nitro: 'Heavy usage & multiple users',
+                            };
+                            return (
+                              <div
+                                key={plan.tier}
+                                className={`relative p-4 bg-white rounded-xl border-2 transition-colors ${
+                                  isPopular
+                                    ? 'border-emerald-400 ring-2 ring-emerald-100'
+                                    : 'border-zinc-200 hover:border-emerald-400'
+                                }`}
                               >
-                                {purchasingLicense ? 'Processing...' : 'Select'}
-                              </button>
-                            </div>
-                          ))}
+                                {isPopular && (
+                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                                    <span className="bg-emerald-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                                      Popular
+                                    </span>
+                                  </div>
+                                )}
+                                <h4 className="text-lg font-bold text-zinc-900 mb-1">{plan.name}</h4>
+                                <p className="text-xs text-zinc-500 mb-2">{planDescriptions[plan.tier]}</p>
+                                <p className="text-2xl font-bold text-emerald-600 mb-4">{plan.price_formatted}</p>
+
+                                <div className="space-y-2 text-sm mb-4">
+                                  <div className="flex items-center gap-2">
+                                    <Zap className="w-4 h-4 text-amber-500" />
+                                    <span className="text-zinc-700"><strong>{plan.limits.speed_limit_mbps}</strong> Mbit/s max speed</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-blue-500" />
+                                    <span className="text-zinc-700">Up to <strong>{plan.limits.max_connections}</strong> connections</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Database className="w-4 h-4 text-violet-500" />
+                                    <span className="text-zinc-700">Logs for up to <strong>{plan.limits.log_weeks}</strong> weeks</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="w-4 h-4 text-emerald-500" />
+                                    <span className="text-zinc-700">Domain blocking</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <RotateCw className="w-4 h-4 text-rose-500" />
+                                    <span className="text-zinc-700">IP rotation</span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => handlePurchaseLicense(plan.tier)}
+                                  disabled={purchasingLicense}
+                                  className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+                                    isPopular
+                                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                                  }`}
+                                >
+                                  {purchasingLicense ? 'Processing...' : 'Select Plan'}
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
