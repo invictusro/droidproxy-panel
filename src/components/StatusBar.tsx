@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Wallet, Calendar, Wifi, AlertTriangle } from 'lucide-react';
+import { Wallet, Calendar, Wifi, AlertTriangle, X, Plus, CreditCard } from 'lucide-react';
 import { api } from '../api/client';
 
 interface StatusBarProps {
@@ -12,11 +12,26 @@ interface PhoneStats {
   expired: number;
 }
 
+interface UpcomingCharge {
+  phoneId: string;
+  phoneName: string;
+  planTier: string;
+  price: number;
+  expiresAt: string;
+}
+
+const PLAN_PRICES: Record<string, number> = { lite: 500, turbo: 700, nitro: 900 };
+
 export default function StatusBar({ user }: StatusBarProps) {
   const [balance, setBalance] = useState<number>(0);
-  const [upcomingCharges, setUpcomingCharges] = useState<number>(0);
+  const [upcomingCharges, setUpcomingCharges] = useState<UpcomingCharge[]>([]);
   const [phoneStats, setPhoneStats] = useState<PhoneStats>({ online: 0, total: 0, expired: 0 });
   const [loading, setLoading] = useState(true);
+
+  // Modal states
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [showUpcomingModal, setShowUpcomingModal] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('10');
 
   useEffect(() => {
     if (!user) return;
@@ -34,28 +49,31 @@ export default function StatusBar({ user }: StatusBarProps) {
 
         let online = 0;
         let expired = 0;
-        let upcomingTotal = 0;
+        const charges: UpcomingCharge[] = [];
 
         phones.forEach((phone: any) => {
-          // Count online phones
           if (phone.status === 'online') {
             online++;
           }
 
-          // Count expired/no-license phones
           if (!phone.has_active_license) {
             expired++;
           }
 
-          // Calculate upcoming charges (phones with auto_extend enabled)
+          // Track upcoming charges with details
           if (phone.license_auto_extend && phone.has_active_license && phone.plan_tier) {
-            const prices: Record<string, number> = { lite: 500, turbo: 700, nitro: 900 };
-            upcomingTotal += prices[phone.plan_tier] || 0;
+            charges.push({
+              phoneId: phone.id,
+              phoneName: phone.name,
+              planTier: phone.plan_tier,
+              price: PLAN_PRICES[phone.plan_tier] || 0,
+              expiresAt: phone.license_expires_at,
+            });
           }
         });
 
         setPhoneStats({ online, total: phones.length, expired });
-        setUpcomingCharges(upcomingTotal);
+        setUpcomingCharges(charges);
       } catch (error) {
         console.error('Failed to fetch status data:', error);
       }
@@ -63,61 +81,199 @@ export default function StatusBar({ user }: StatusBarProps) {
     };
 
     fetchData();
-
-    // Refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
   if (!user || loading) return null;
 
-  const formatCents = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`;
+  const formatCents = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  const totalUpcoming = upcomingCharges.reduce((sum, c) => sum + c.price, 0);
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   return (
-    <div className="bg-zinc-100 border-b border-zinc-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-10 text-sm">
-          <div className="flex items-center gap-6">
-            {/* Balance */}
-            <div className="flex items-center gap-2 text-zinc-600">
-              <Wallet className="w-4 h-4 text-emerald-600" />
-              <span className="text-zinc-500">Balance:</span>
-              <span className="font-semibold text-zinc-900">{formatCents(balance)}</span>
+    <>
+      <div className="bg-zinc-100 border-b border-zinc-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-10 text-sm">
+            <div className="flex items-center gap-6">
+              {/* Balance - Clickable */}
+              <button
+                onClick={() => setShowTopUpModal(true)}
+                className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <span className="text-zinc-500">Balance:</span>
+                <span className="font-semibold text-zinc-900">{formatCents(balance)}</span>
+                <Plus className="w-3 h-3 text-emerald-600" />
+              </button>
+
+              {/* Upcoming Charges - Clickable */}
+              <button
+                onClick={() => setShowUpcomingModal(true)}
+                className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="text-zinc-500">Upcoming:</span>
+                <span className="font-semibold text-zinc-900">{formatCents(totalUpcoming)}</span>
+                {upcomingCharges.length > 0 && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                    {upcomingCharges.length}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Upcoming Charges */}
-            <div className="flex items-center gap-2 text-zinc-600">
-              <Calendar className="w-4 h-4 text-blue-600" />
-              <span className="text-zinc-500">Upcoming:</span>
-              <span className="font-semibold text-zinc-900">{formatCents(upcomingCharges)}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            {/* Online Phones */}
-            <div className="flex items-center gap-2 text-zinc-600">
-              <Wifi className="w-4 h-4 text-emerald-600" />
-              <span className="text-zinc-500">Online:</span>
-              <span className="font-semibold text-emerald-600">{phoneStats.online}</span>
-              <span className="text-zinc-400">/</span>
-              <span className="text-zinc-700">{phoneStats.total}</span>
-            </div>
-
-            {/* Expired Phones */}
-            {phoneStats.expired > 0 && (
+            <div className="flex items-center gap-6">
+              {/* Online Phones */}
               <div className="flex items-center gap-2 text-zinc-600">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                <span className="text-zinc-500">Expired:</span>
-                <span className="font-semibold text-red-600">{phoneStats.expired}</span>
+                <Wifi className="w-4 h-4 text-emerald-600" />
+                <span className="text-zinc-500">Online:</span>
+                <span className="font-semibold text-emerald-600">{phoneStats.online}</span>
                 <span className="text-zinc-400">/</span>
                 <span className="text-zinc-700">{phoneStats.total}</span>
               </div>
-            )}
+
+              {/* Expired Phones */}
+              {phoneStats.expired > 0 && (
+                <div className="flex items-center gap-2 text-zinc-600">
+                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                  <span className="text-zinc-500">Expired:</span>
+                  <span className="font-semibold text-red-600">{phoneStats.expired}</span>
+                  <span className="text-zinc-400">/</span>
+                  <span className="text-zinc-700">{phoneStats.total}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Top-Up Modal */}
+      {showTopUpModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-zinc-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-zinc-900">Top Up Balance</h2>
+              <button onClick={() => setShowTopUpModal(false)} className="p-2 hover:bg-zinc-100 rounded-full">
+                <X className="w-5 h-5 text-zinc-500" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-zinc-500 mb-2">Current Balance</p>
+              <p className="text-3xl font-bold text-emerald-600">{formatCents(balance)}</p>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-zinc-500 mb-3">Select Amount</p>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {['5', '10', '25', '50'].map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => setTopUpAmount(amount)}
+                    className={`py-3 rounded-lg font-semibold transition-colors ${
+                      topUpAmount === amount
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                    }`}
+                  >
+                    ${amount}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-zinc-500">$</span>
+                <input
+                  type="number"
+                  value={topUpAmount}
+                  onChange={(e) => setTopUpAmount(e.target.value)}
+                  min="1"
+                  className="flex-1 px-3 py-2 border border-zinc-200 rounded-lg text-lg font-semibold"
+                />
+              </div>
+            </div>
+
+            <button
+              className="w-full py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 flex items-center justify-center gap-2"
+            >
+              <CreditCard className="w-5 h-5" />
+              Pay ${topUpAmount}.00
+            </button>
+
+            <p className="text-xs text-zinc-400 text-center mt-4">
+              Secure payment via Stripe
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Charges Modal */}
+      {showUpcomingModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-zinc-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-zinc-900">Upcoming Charges</h2>
+              <button onClick={() => setShowUpcomingModal(false)} className="p-2 hover:bg-zinc-100 rounded-full">
+                <X className="w-5 h-5 text-zinc-500" />
+              </button>
+            </div>
+
+            {upcomingCharges.length === 0 ? (
+              <div className="text-center py-8 text-zinc-500">
+                <Calendar className="w-12 h-12 mx-auto mb-3 text-zinc-300" />
+                <p>No upcoming charges</p>
+                <p className="text-sm mt-1">Enable auto-extend on your phone licenses to see charges here</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 mb-6 max-h-80 overflow-y-auto">
+                  {upcomingCharges.map((charge) => (
+                    <div key={charge.phoneId} className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+                      <div>
+                        <p className="font-medium text-zinc-900">{charge.phoneName}</p>
+                        <p className="text-sm text-zinc-500">
+                          {charge.planTier.charAt(0).toUpperCase() + charge.planTier.slice(1)} plan
+                          <span className="mx-2">·</span>
+                          Renews {formatDate(charge.expiresAt)}
+                        </p>
+                      </div>
+                      <p className="font-semibold text-zinc-900">{formatCents(charge.price)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-zinc-200 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-600">Total</span>
+                    <span className="text-xl font-bold text-zinc-900">{formatCents(totalUpcoming)}</span>
+                  </div>
+                  {balance < totalUpcoming && (
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm text-amber-800">
+                        Insufficient balance. You need {formatCents(totalUpcoming - balance)} more to cover all renewals.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowUpcomingModal(false);
+                          setShowTopUpModal(true);
+                        }}
+                        className="mt-2 text-sm font-medium text-amber-700 hover:text-amber-900"
+                      >
+                        Top up now →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
