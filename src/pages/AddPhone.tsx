@@ -90,10 +90,6 @@ export default function AddPhone() {
 
     try {
       const result = await createPhone.mutateAsync({ name, hub_server_id: serverId });
-      console.log('========== PHONE CREATED ==========');
-      console.log('QR Code Data:', result.qr_code_data);
-      console.log('Parsed QR:', JSON.parse(result.qr_code_data));
-      console.log('====================================');
       setCreatedPhone(result);
     } catch (error) {
       console.error('Failed to create phone:', error);

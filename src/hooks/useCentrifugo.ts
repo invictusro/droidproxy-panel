@@ -43,10 +43,7 @@ export function useCentrifugo(phoneIds: string[], token: string | null, wsUrl: s
   }, []);
 
   useEffect(() => {
-    console.log('[Centrifugo] Hook called with:', { token: token ? 'present' : 'null', effectiveWsUrl, phoneIdsCount: phoneIds.length });
-
     if (!token || !effectiveWsUrl || phoneIds.length === 0) {
-      console.log('[Centrifugo] Missing requirements, not connecting');
       return;
     }
 
@@ -55,8 +52,6 @@ export function useCentrifugo(phoneIds: string[], token: string | null, wsUrl: s
       .replace('http://', 'ws://')
       .replace('https://', 'wss://') + '/connection/websocket';
 
-    console.log('[Centrifugo] Connecting to:', centrifugoWsUrl);
-
     // Create client if not exists
     if (!clientRef.current) {
       const client = new Centrifuge(centrifugoWsUrl, {
@@ -64,12 +59,10 @@ export function useCentrifugo(phoneIds: string[], token: string | null, wsUrl: s
       });
 
       client.on('connected', () => {
-        console.log('[Centrifugo] Connected!');
         setConnected(true);
       });
 
-      client.on('disconnected', (ctx) => {
-        console.log('[Centrifugo] Disconnected:', ctx);
+      client.on('disconnected', () => {
         setConnected(false);
       });
 
@@ -98,17 +91,12 @@ export function useCentrifugo(phoneIds: string[], token: string | null, wsUrl: s
         });
 
         sub.on('subscribed', () => {
-          console.log(`Subscribed to ${channel}`);
           // Request immediate status from phone (rate limited to 10s)
           const now = Date.now();
           const lastRequest = lastStatusRequestRef.current[phoneId] || 0;
           if (now - lastRequest >= STATUS_REQUEST_COOLDOWN_MS) {
             lastStatusRequestRef.current[phoneId] = now;
-            client.publish(channel, { command: 'request_status' }).catch(err => {
-              console.log(`Failed to request status for ${channel}:`, err);
-            });
-          } else {
-            console.log(`Status request for ${channel} rate limited`);
+            client.publish(channel, { command: 'request_status' }).catch(() => {});
           }
         });
 
