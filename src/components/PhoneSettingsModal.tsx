@@ -458,15 +458,14 @@ export default function PhoneSettingsModal({
         const hourData = uptimeData.hourly.find(h => h.hour === hour);
         for (let min = 0; min < 60; min += 5) {
           const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-          if (!hourData) {
+          if (!hourData || hourData.uptime === 0) {
+            // No data or 0 uptime means we don't have tracking info - show as no data, not offline
             intervals.push({ time: timeStr, status: 'nodata' });
           } else if (hourData.uptime >= 80) {
             intervals.push({ time: timeStr, status: 'online' });
-          } else if (hourData.uptime > 0) {
-            // Partial uptime - simulate some offline periods
-            intervals.push({ time: timeStr, status: min < 30 && hourData.uptime < 50 ? 'offline' : 'online' });
           } else {
-            intervals.push({ time: timeStr, status: 'offline' });
+            // Partial uptime - mix of online/offline based on percentage
+            intervals.push({ time: timeStr, status: min < 30 && hourData.uptime < 50 ? 'offline' : 'online' });
           }
         }
       }
