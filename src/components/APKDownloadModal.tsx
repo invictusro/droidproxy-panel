@@ -1,4 +1,5 @@
-import { X, Download, Smartphone, Shield, Settings, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { X, Download, Shield, Copy, Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface APKDownloadModalProps {
@@ -6,13 +7,22 @@ interface APKDownloadModalProps {
   onClose: () => void;
 }
 
-const APK_URL = 'https://github.com/invictusro/droidproxy-apk/releases/latest/download/droidproxy.apk';
+const APK_LINK = 'proxydroid.com/apk';
+const APK_FULL_URL = 'https://proxydroid.com/apk';
 
 export default function APKDownloadModal({ isOpen, onClose }: APKDownloadModalProps) {
+  const [copied, setCopied] = useState(false);
+
   if (!isOpen) return null;
 
-  const handleDownload = () => {
-    window.open(APK_URL, '_blank');
+  const handleCopy = () => {
+    navigator.clipboard.writeText(APK_LINK);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDirectDownload = () => {
+    window.open(APK_FULL_URL, '_blank');
   };
 
   return (
@@ -36,66 +46,74 @@ export default function APKDownloadModal({ isOpen, onClose }: APKDownloadModalPr
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Download Button */}
-          <Button
-            onClick={handleDownload}
-            className="w-full h-14 text-lg gap-3 bg-emerald-600 hover:bg-emerald-700"
-          >
-            <Download className="w-6 h-6" />
-            Download APK
-            <ExternalLink className="w-4 h-4 opacity-60" />
-          </Button>
+          {/* Main Link */}
+          <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4">
+            <p className="text-sm text-emerald-700 mb-2 text-center">Open this link on your Android phone:</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xl font-bold text-emerald-900 bg-white px-4 py-3 rounded-lg text-center border border-emerald-200">
+                {APK_LINK}
+              </code>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleCopy}
+                className="h-12 w-12 border-emerald-300 hover:bg-emerald-100"
+              >
+                {copied ? (
+                  <Check className="w-5 h-5 text-emerald-600" />
+                ) : (
+                  <Copy className="w-5 h-5 text-emerald-600" />
+                )}
+              </Button>
+            </div>
+            {copied && (
+              <p className="text-sm text-emerald-600 text-center mt-2">Copied to clipboard!</p>
+            )}
+          </div>
+
+          {/* Alternative: Direct Download */}
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-2">Or download directly:</p>
+            <Button
+              variant="outline"
+              onClick={handleDirectDownload}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Download APK
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </Button>
+          </div>
 
           {/* Instructions */}
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="font-medium text-gray-900 mb-3">Installation Instructions</h3>
-            <ol className="space-y-3">
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-medium">1</span>
-                <div>
-                  <p className="font-medium text-gray-800">Open the link in your browser</p>
-                  <p className="text-sm text-gray-500">Use Chrome, Firefox, or your default browser on your Android phone</p>
-                </div>
+            <ol className="space-y-2 text-sm">
+              <li className="flex gap-2">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-medium">1</span>
+                <span className="text-gray-600">Open the link in Chrome or your browser</span>
               </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-medium">2</span>
-                <div>
-                  <p className="font-medium text-gray-800">Download the APK file</p>
-                  <p className="text-sm text-gray-500">Tap the download link and wait for it to complete</p>
-                </div>
+              <li className="flex gap-2">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-medium">2</span>
+                <span className="text-gray-600">Tap "Download" and wait for completion</span>
               </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-medium">3</span>
-                <div>
-                  <p className="font-medium text-gray-800">Enable "Install from unknown sources"</p>
-                  <p className="text-sm text-gray-500">When prompted, go to Settings and allow your browser to install apps</p>
-                </div>
+              <li className="flex gap-2">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-medium">3</span>
+                <span className="text-gray-600">Open the file and tap "Install"</span>
               </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-medium">4</span>
-                <div>
-                  <p className="font-medium text-gray-800">Install and open the app</p>
-                  <p className="text-sm text-gray-500">Tap the downloaded file and follow the prompts to install</p>
-                </div>
+              <li className="flex gap-2">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-medium">4</span>
+                <span className="text-gray-600">If prompted, enable "Install from unknown sources"</span>
               </li>
             </ol>
           </div>
 
-          {/* Tips */}
-          <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <Shield className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium text-amber-800">Security Note</p>
-              <p className="text-amber-700">You may see a warning about installing apps from unknown sources. This is normal for APKs downloaded outside the Play Store.</p>
-            </div>
-          </div>
-
-          {/* Direct Link */}
-          <div className="text-center pt-2">
-            <p className="text-sm text-gray-500 mb-1">Or copy this link to your phone:</p>
-            <code className="text-xs bg-gray-100 px-3 py-1.5 rounded-md text-gray-700 select-all block overflow-x-auto">
-              proxydroid.com/apk
-            </code>
+          {/* Security Note */}
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+            <Shield className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-700">
+              <span className="font-medium">Note:</span> You may see a security warning - this is normal for apps installed outside the Play Store.
+            </p>
           </div>
         </div>
       </div>
