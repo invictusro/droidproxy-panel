@@ -647,8 +647,7 @@ export default function PhoneSettingsModal({
                               <p className="text-2xl font-bold text-emerald-700">{license.plan_tier.toUpperCase()}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-xs text-emerald-600">{license.days_remaining} days remaining</p>
-                              <p className="text-sm text-emerald-700">Expires {new Date(license.expires_at).toLocaleDateString()}</p>
+                              <p className="text-sm text-emerald-700">Expires {new Date(license.expires_at).toLocaleDateString('en-GB')}</p>
                             </div>
                           </div>
                           <div className="grid grid-cols-3 gap-3 pt-4 border-t border-emerald-200">
@@ -693,7 +692,7 @@ export default function PhoneSettingsModal({
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-red-600">Expired</p>
-                              <p className="text-sm text-red-700">{new Date(license.expires_at).toLocaleDateString()}</p>
+                              <p className="text-sm text-red-700">{new Date(license.expires_at).toLocaleDateString('en-GB')}</p>
                             </div>
                           </div>
                           <div className="grid grid-cols-3 gap-3 pt-4 border-t border-red-200 mb-4">
@@ -931,7 +930,7 @@ export default function PhoneSettingsModal({
                                 {cred.expires_at && (
                                   <span className="text-xs px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(cred.expires_at).toLocaleDateString()}
+                                    {new Date(cred.expires_at).toLocaleDateString('en-GB')}
                                   </span>
                                 )}
                               </div>
