@@ -229,12 +229,10 @@ export default function PhoneSettingsModal({
   };
 
   const handleCancelLicense = async () => {
-    if (!confirm('Are you sure you want to cancel your license? This cannot be undone and no refund will be provided.')) return;
+    if (!confirm('Are you sure you want to cancel your license? It will remain active until the expiry date but will not renew.')) return;
     try {
       await api.cancelLicense(phone.id);
-      setLicense(null);
-      setHasLicense(false);
-      setActiveSection('license');
+      await loadLicenseData(); // Reload to show updated auto_extend status
     } catch (error: any) {
       const msg = error.response?.data?.error || 'Failed to cancel license';
       alert(msg);
@@ -706,20 +704,22 @@ export default function PhoneSettingsModal({
                           </label>
                         </div>
 
-                        <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-red-700">Cancel License</p>
-                              <p className="text-xs text-red-600 mt-0.5">Stop your license immediately. No refund will be provided.</p>
+                        {license.auto_extend && (
+                          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-amber-700">Cancel License</p>
+                                <p className="text-xs text-amber-600 mt-0.5">License stays active until {new Date(license.expires_at).toLocaleDateString('en-GB')} but won't renew.</p>
+                              </div>
+                              <button
+                                onClick={handleCancelLicense}
+                                className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                              >
+                                Cancel
+                              </button>
                             </div>
-                            <button
-                              onClick={handleCancelLicense}
-                              className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
-                            >
-                              Cancel
-                            </button>
                           </div>
-                        </div>
+                        )}
                       </div>
                     ) : license && license.status === 'expired' ? (
                       /* Expired License */
