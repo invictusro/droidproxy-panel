@@ -15,6 +15,9 @@ interface ServerForm {
   ssh_port: number;
   ssh_user: string;
   ssh_password: string;
+  vcpus: number;
+  cpu_benchmark_single: number;
+  cpu_benchmark_all: number;
 }
 
 const initialForm: ServerForm = {
@@ -28,6 +31,9 @@ const initialForm: ServerForm = {
   ssh_port: 22,
   ssh_user: 'root',
   ssh_password: '',
+  vcpus: 0,
+  cpu_benchmark_single: 0,
+  cpu_benchmark_all: 0,
 };
 
 // GitHub URL for hub-agent binary (placeholder)
@@ -178,6 +184,9 @@ export default function Servers() {
       ssh_port: 22,
       ssh_user: 'root',
       ssh_password: '',
+      vcpus: server.vcpus || 0,
+      cpu_benchmark_single: server.cpu_benchmark_single || 0,
+      cpu_benchmark_all: server.cpu_benchmark_all || 0,
     });
     setShowModal(true);
   };
@@ -412,6 +421,34 @@ export default function Servers() {
                   <span>Ports: {server.proxy_port_start}-{server.proxy_port_end}</span>
                 </div>
 
+                {/* CPU Specs - show if benchmark data exists */}
+                {(server.vcpus || server.cpu_benchmark_all) && (
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-xs text-blue-600 mb-2">
+                      <Cpu className="w-3 h-3" />
+                      CPU Benchmark (sysbench)
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <div className="text-lg font-semibold text-gray-900">{server.vcpus || '-'}</div>
+                        <div className="text-xs text-gray-500">vCPUs</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {server.cpu_benchmark_single ? server.cpu_benchmark_single.toLocaleString() : '-'}
+                        </div>
+                        <div className="text-xs text-gray-500">Single</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {server.cpu_benchmark_all ? server.cpu_benchmark_all.toLocaleString() : '-'}
+                        </div>
+                        <div className="text-xs text-gray-500">All Cores</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Version */}
                 {server.has_hub_api_key && (
                   <div className="flex items-center justify-between text-sm">
@@ -595,6 +632,45 @@ export default function Servers() {
                       onChange={(e) => setForm({ ...form, proxy_port_end: parseInt(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     />
+                  </div>
+                </div>
+
+                {/* CPU Benchmark Section */}
+                <div className="border-t pt-4 mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CPU Benchmark (sysbench events/sec)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">vCPUs</label>
+                      <input
+                        type="number"
+                        value={form.vcpus}
+                        onChange={(e) => setForm({ ...form, vcpus: parseInt(e.target.value) || 0 })}
+                        placeholder="2"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Single Core</label>
+                      <input
+                        type="number"
+                        value={form.cpu_benchmark_single}
+                        onChange={(e) => setForm({ ...form, cpu_benchmark_single: parseInt(e.target.value) || 0 })}
+                        placeholder="1000"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">All Cores</label>
+                      <input
+                        type="number"
+                        value={form.cpu_benchmark_all}
+                        onChange={(e) => setForm({ ...form, cpu_benchmark_all: parseInt(e.target.value) || 0 })}
+                        placeholder="2000"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

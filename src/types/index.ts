@@ -30,6 +30,10 @@ export interface Server {
   last_heartbeat?: string;
   // OTA version tracking
   current_version?: string;
+  // Server specs (set once when adding)
+  vcpus?: number;
+  cpu_benchmark_single?: number; // sysbench events/sec single core
+  cpu_benchmark_all?: number;    // sysbench events/sec all cores
 }
 
 export interface ServerTelemetry {
