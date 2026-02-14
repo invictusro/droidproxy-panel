@@ -961,6 +961,7 @@ export default function Phones() {
           onRotateIP={() => handleRotateIP(selectedPhone.id)}
           onRestart={() => handleRestart(selectedPhone.id)}
           onDelete={() => handleDelete(selectedPhone.id)}
+          onRefetch={() => refetch()}
           isRotating={rotatingIds.has(selectedPhone.id)}
           isRestarting={restartingIds.has(selectedPhone.id)}
         />

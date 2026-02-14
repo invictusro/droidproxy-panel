@@ -35,6 +35,7 @@ interface Props {
   onRotateIP: () => void;
   onRestart: () => void;
   onDelete: () => void;
+  onRefetch?: () => void;
   isRotating: boolean;
   isRestarting: boolean;
 }
@@ -45,6 +46,7 @@ export default function PhoneSettingsModal({
   onRotateIP,
   onRestart,
   onDelete,
+  onRefetch,
   isRotating,
   isRestarting
 }: Props) {
@@ -209,6 +211,8 @@ export default function PhoneSettingsModal({
       await loadLicenseData();
       // Unlock other sections after successful purchase
       setHasLicense(true);
+      // Refresh phones list to update plan in table
+      onRefetch?.();
     } catch (error: any) {
       const msg = error.response?.data?.error || 'Failed to purchase license';
       setConfirmModal({
@@ -274,6 +278,8 @@ export default function PhoneSettingsModal({
       setPlanChangePreview(null);
       await loadLicenseData();
       setHasLicense(true);
+      // Refresh phones list to update plan in table
+      onRefetch?.();
     } catch (error: any) {
       const msg = error.response?.data?.error || 'Failed to change plan';
       alert(msg);
