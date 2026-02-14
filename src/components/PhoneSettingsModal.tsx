@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronLeft, ChevronRight, Activity, Database, Download, CreditCard, Smartphone, Battery, Cpu, Info, Settings, AlertTriangle, Calendar } from 'lucide-react';
+import { X, Plus, Trash2, Copy, RefreshCw, RotateCw, Power, Check, Clock, Zap, ArrowUp, ArrowDown, Shield, ChevronLeft, ChevronRight, Activity, Database, Download, CreditCard, Smartphone, Battery, Cpu, Info, Settings, AlertTriangle, Calendar, Pencil } from 'lucide-react';
 import { api } from '../api/client';
 import type { PhoneWithStatus, ConnectionCredential, RotationToken, ProxyType, AuthType, PhoneLicense, Plan, PlanChangePreview, PlanTier } from '../types';
 
@@ -126,6 +126,11 @@ export default function PhoneSettingsModal({
     return getLocalDateString(d);
   });
   const [exportEndDate, setExportEndDate] = useState(() => getLocalDateString());
+
+  // Phone name editing
+  const [editingName, setEditingName] = useState(false);
+  const [newPhoneName, setNewPhoneName] = useState(phone.name);
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -462,6 +467,23 @@ export default function PhoneSettingsModal({
       }
     }
     return strings;
+  };
+
+  const savePhoneName = async () => {
+    if (!newPhoneName.trim() || newPhoneName === phone.name) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    try {
+      await api.updatePhone(phone.id, { name: newPhoneName.trim() });
+      setEditingName(false);
+      onRefetch?.();
+    } catch (error) {
+      console.error('Failed to update phone name:', error);
+    } finally {
+      setSavingName(false);
+    }
   };
 
   const exportLogsCSV = async () => {
@@ -1509,6 +1531,47 @@ export default function PhoneSettingsModal({
                 {activeSection === 'actions' && (
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-zinc-900 mb-4">Actions</h3>
+
+                    <div className="p-4 border border-zinc-200 rounded-xl bg-white">
+                      <h4 className="font-semibold text-zinc-900 mb-2">Rename Phone</h4>
+                      <p className="text-sm text-zinc-600 mb-3">Change the display name of this phone.</p>
+                      {editingName ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newPhoneName}
+                            onChange={(e) => setNewPhoneName(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            placeholder="Phone name"
+                            autoFocus
+                          />
+                          <button
+                            onClick={savePhoneName}
+                            disabled={savingName}
+                            className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {savingName ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => { setEditingName(false); setNewPhoneName(phone.name); }}
+                            className="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm rounded-lg hover:bg-zinc-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-zinc-700 font-medium">{phone.name}</span>
+                          <button
+                            onClick={() => setEditingName(true)}
+                            className="flex items-center px-3 py-1.5 text-sm border border-zinc-200 rounded-lg hover:bg-zinc-50"
+                          >
+                            <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                            Edit
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="p-4 border border-zinc-200 rounded-xl bg-white">
                       <h4 className="font-semibold text-zinc-900 mb-2">Rotate IP</h4>
