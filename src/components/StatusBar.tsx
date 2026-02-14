@@ -141,20 +141,22 @@ export default function StatusBar({ user, centrifugoToken, centrifugoUrl }: Stat
                 <Plus className="w-3 h-3 text-emerald-600" />
               </button>
 
-              {/* Upcoming Charges - Only show when licenses expire within 7 days */}
-              {soonExpiringCharges.length > 0 && (
-                <button
-                  onClick={() => setShowUpcomingModal(true)}
-                  className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors"
-                >
-                  <Calendar className="w-4 h-4 text-amber-600" />
-                  <span className="text-amber-600">Expiring soon:</span>
-                  <span className="font-semibold text-amber-700">{formatCents(totalUpcoming)}</span>
+              {/* Upcoming Charges - Always visible */}
+              <button
+                onClick={() => setShowUpcomingModal(true)}
+                className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                <Calendar className={`w-4 h-4 ${soonExpiringCharges.length > 0 ? 'text-amber-600' : 'text-zinc-400'}`} />
+                <span className="text-zinc-500">Upcoming:</span>
+                <span className={`font-semibold ${soonExpiringCharges.length > 0 ? 'text-amber-700' : 'text-zinc-600'}`}>
+                  {formatCents(totalUpcoming)}
+                </span>
+                {soonExpiringCharges.length > 0 && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
                     {soonExpiringCharges.length}
                   </span>
-                </button>
-              )}
+                )}
+              </button>
             </div>
 
             <div className="flex items-center gap-6">
