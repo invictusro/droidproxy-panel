@@ -182,11 +182,14 @@ export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }:
                   <li>2. Tap "Scan QR Code" and scan the code above</li>
                   {pin && <li>3. Enter the PIN when prompted</li>}
                 </ol>
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium text-gray-600">Alternative:</span> You can also login in the app with your panel username and password
-                  </p>
-                </div>
+              </div>
+
+              {/* Alternative login option */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-blue-800 mb-1">Or login with your account</p>
+                <p className="text-sm text-blue-600">
+                  You can also sign in to the app using your panel email and password instead of scanning the QR code.
+                </p>
               </div>
 
               {/* Back link */}
