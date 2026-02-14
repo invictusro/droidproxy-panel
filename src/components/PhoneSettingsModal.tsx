@@ -492,14 +492,17 @@ export default function PhoneSettingsModal({
               const isLicenseItem = item.id === 'license';
               const isLocked = !hasLicense && !isLicenseItem;
               const needsAttention = !hasLicense && isLicenseItem;
+              // Restrictions only available for Turbo/Nitro plans
+              const isRestrictionsLocked = item.id === 'restrictions' && phone.plan_tier !== 'turbo' && phone.plan_tier !== 'nitro';
+              const isDisabled = isLocked || isRestrictionsLocked;
 
               return (
                 <button
                   key={item.id}
-                  onClick={() => !isLocked && setActiveSection(item.id)}
-                  disabled={isLocked}
+                  onClick={() => !isDisabled && setActiveSection(item.id)}
+                  disabled={isDisabled}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                    isLocked
+                    isDisabled
                       ? 'text-zinc-300 cursor-not-allowed'
                       : activeSection === item.id
                         ? 'bg-emerald-100 text-emerald-700 font-medium border-r-2 border-emerald-600'
@@ -514,6 +517,9 @@ export default function PhoneSettingsModal({
                     item.icon
                   )}
                   {item.label}
+                  {isRestrictionsLocked && (
+                    <span className="ml-auto text-[10px] text-zinc-400">Turbo+</span>
+                  )}
                   {needsAttention && activeSection !== 'license' && (
                     <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   )}
