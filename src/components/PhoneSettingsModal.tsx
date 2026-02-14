@@ -694,6 +694,10 @@ export default function PhoneSettingsModal({
                                     <Database className="w-4 h-4 text-violet-500" />
                                     <span className="text-zinc-700">Logs for up to <strong>{plan.limits.log_weeks}</strong> weeks</span>
                                   </div>
+                                  <div className="flex items-center gap-2">
+                                    <RotateCw className="w-4 h-4 text-rose-500" />
+                                    <span className="text-zinc-700">IP rotation</span>
+                                  </div>
                                   {(plan.tier === 'turbo' || plan.tier === 'nitro') ? (
                                     <div className="flex items-center gap-2">
                                       <Shield className="w-4 h-4 text-emerald-500" />
@@ -705,10 +709,6 @@ export default function PhoneSettingsModal({
                                       <span className="text-zinc-400 line-through">Domain blocking</span>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2">
-                                    <RotateCw className="w-4 h-4 text-rose-500" />
-                                    <span className="text-zinc-700">IP rotation</span>
-                                  </div>
                                 </div>
 
                                 <button
