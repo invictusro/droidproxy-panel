@@ -49,7 +49,7 @@ export default function PhoneSettingsModal({
   isRestarting
 }: Props) {
   // Auto-select license tab if phone has no license
-  const hasLicense = phone.has_active_license;
+  const [hasLicense, setHasLicense] = useState(phone.has_active_license);
   const [activeSection, setActiveSection] = useState<MainSection>(hasLicense ? 'overview' : 'license');
   const [trafficSubTab, setTrafficSubTab] = useState<TrafficSubTab>('monthly');
   const [deviceSubTab, setDeviceSubTab] = useState<DeviceSubTab>('metrics');
@@ -196,6 +196,8 @@ export default function PhoneSettingsModal({
     try {
       await api.purchaseLicense(phone.id, { plan_tier: confirmModal.planTier as any, auto_extend: purchaseAutoExtend });
       await loadLicenseData();
+      // Unlock other sections after successful purchase
+      setHasLicense(true);
     } catch (error: any) {
       const msg = error.response?.data?.error || 'Failed to purchase license';
       setConfirmModal({
@@ -521,8 +523,9 @@ export default function PhoneSettingsModal({
               const isLicenseItem = item.id === 'license';
               const isLocked = !hasLicense && !isLicenseItem;
               const needsAttention = !hasLicense && isLicenseItem;
-              // Restrictions only available for Turbo/Nitro plans
-              const isRestrictionsLocked = item.id === 'restrictions' && phone.plan_tier !== 'turbo' && phone.plan_tier !== 'nitro';
+              // Restrictions only available for Turbo/Nitro plans - use license state for live updates
+              const currentPlanTier = license?.plan_tier || phone.plan_tier;
+              const isRestrictionsLocked = item.id === 'restrictions' && currentPlanTier !== 'turbo' && currentPlanTier !== 'nitro';
               const isDisabled = isLocked || isRestrictionsLocked;
 
               return (
