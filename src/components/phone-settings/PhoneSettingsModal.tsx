@@ -83,6 +83,7 @@ export default function PhoneSettingsModal({
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [usageDateRange, setUsageDateRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [uptimeSelectedDate, setUptimeSelectedDate] = useState<string>(() => getLocalDateString());
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string>('');
 
   // Rotation settings state
   const [rotationMode, setRotationMode] = useState<RotationMode>('off');
@@ -108,7 +109,7 @@ export default function PhoneSettingsModal({
     if (activeSection === 'traffic' || activeSection === 'uptime') {
       loadUsageData();
     }
-  }, [activeSection, usageDateRange, uptimeSelectedDate]);
+  }, [activeSection, usageDateRange, uptimeSelectedDate, selectedCredentialId]);
 
   useEffect(() => {
     if (activeSection === 'license') {
@@ -166,7 +167,7 @@ export default function PhoneSettingsModal({
       const prevDateStr = getLocalDateString(prevDate);
 
       const [usageRes, uptimeRes, uptimePrevRes] = await Promise.all([
-        api.getPhoneDataUsage(phone.id, usageRange.start, usageRange.end),
+        api.getPhoneDataUsage(phone.id, usageRange.start, usageRange.end, selectedCredentialId || undefined),
         api.getPhoneUptime(phone.id, uptimeSelectedDate, uptimeSelectedDate),
         api.getPhoneUptime(phone.id, prevDateStr, prevDateStr),
       ]);
@@ -496,12 +497,15 @@ export default function PhoneSettingsModal({
                 {activeSection === 'traffic' && (
                   <TrafficSection
                     dataUsage={dataUsage}
+                    uptimeData={uptimeData}
                     credentials={credentials}
                     loadingUsage={loadingUsage}
                     trafficSubTab={trafficSubTab}
                     usageDateRange={usageDateRange}
+                    selectedCredentialId={selectedCredentialId}
                     onSubTabChange={setTrafficSubTab}
                     onDateRangeChange={setUsageDateRange}
+                    onCredentialChange={setSelectedCredentialId}
                   />
                 )}
 

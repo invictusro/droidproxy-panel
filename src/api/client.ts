@@ -124,10 +124,11 @@ export const api = {
     client.put(`/phones/${phoneId}/blocked-domains`, { blocked_domains: blockedDomains }),
 
   // Usage & Uptime (supports date range: start_date, end_date in YYYY-MM-DD format)
-  getPhoneDataUsage: (phoneId: string, startDate?: string, endDate?: string) => {
+  getPhoneDataUsage: (phoneId: string, startDate?: string, endDate?: string, credentialId?: string) => {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (credentialId) params.append('credential_id', credentialId);
     const query = params.toString();
     return client.get(`/phones/${phoneId}/data-usage${query ? `?${query}` : ''}`);
   },
