@@ -1,40 +1,27 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Server, ChevronRight } from 'lucide-react';
+import { MapPin, Server, ChevronRight, Globe } from 'lucide-react';
 import { api } from '../api/client';
 import { useCreatePhone } from '../hooks/usePhones';
 import QRCodeModal from '../components/QRCodeModal';
 import type { Server as ServerType, PhoneWithPairing } from '../types';
+import Flags from 'country-flag-icons/react/3x2';
 
-// Country code to flag emoji mapping
-const countryFlags: Record<string, string> = {
-  'US': '🇺🇸',
-  'USA': '🇺🇸',
-  'United States': '🇺🇸',
-  'UK': '🇬🇧',
-  'GB': '🇬🇧',
-  'United Kingdom': '🇬🇧',
-  'DE': '🇩🇪',
-  'Germany': '🇩🇪',
-  'FR': '🇫🇷',
-  'France': '🇫🇷',
-  'NL': '🇳🇱',
-  'Netherlands': '🇳🇱',
-  'CA': '🇨🇦',
-  'Canada': '🇨🇦',
-  'AU': '🇦🇺',
-  'Australia': '🇦🇺',
-  'JP': '🇯🇵',
-  'Japan': '🇯🇵',
-  'SG': '🇸🇬',
-  'Singapore': '🇸🇬',
-  'IN': '🇮🇳',
-  'India': '🇮🇳',
-  'BR': '🇧🇷',
-  'Brazil': '🇧🇷',
-  'RO': '🇷🇴',
-  'Romania': '🇷🇴',
+// Country code mapping from location strings
+const locationToCode: Record<string, string> = {
+  'US': 'US', 'USA': 'US', 'United States': 'US',
+  'UK': 'GB', 'GB': 'GB', 'United Kingdom': 'GB',
+  'DE': 'DE', 'Germany': 'DE',
+  'FR': 'FR', 'France': 'FR',
+  'NL': 'NL', 'Netherlands': 'NL',
+  'CA': 'CA', 'Canada': 'CA',
+  'AU': 'AU', 'Australia': 'AU',
+  'JP': 'JP', 'Japan': 'JP',
+  'SG': 'SG', 'Singapore': 'SG',
+  'IN': 'IN', 'India': 'IN',
+  'BR': 'BR', 'Brazil': 'BR',
+  'RO': 'RO', 'Romania': 'RO',
 };
 
 const regions: Record<string, string[]> = {
@@ -45,12 +32,20 @@ const regions: Record<string, string[]> = {
   'South America': ['BR', 'Brazil'],
 };
 
-function getFlag(location: string): string {
-  for (const [key, flag] of Object.entries(countryFlags)) {
-    if (location.includes(key)) return flag;
+// SVG Flag component that works on all platforms
+const LocationFlag = ({ location, className }: { location: string; className?: string }) => {
+  let code: string | undefined;
+  for (const [key, countryCode] of Object.entries(locationToCode)) {
+    if (location.includes(key)) {
+      code = countryCode;
+      break;
+    }
   }
-  return '🌍';
-}
+  if (!code) return <Globe className={className || "w-8 h-8 text-muted-foreground"} />;
+  const FlagComponent = Flags[code as keyof typeof Flags];
+  if (!FlagComponent) return <Globe className={className || "w-8 h-8 text-muted-foreground"} />;
+  return <FlagComponent className={className || "w-8 h-auto rounded-sm"} />;
+};
 
 function getRegion(location: string): string {
   for (const [region, countries] of Object.entries(regions)) {
@@ -175,7 +170,7 @@ export default function AddPhone() {
                 >
                   <div className="flex items-center space-x-4">
                     {/* Flag */}
-                    <span className="text-3xl">{getFlag(server.location)}</span>
+                    <LocationFlag location={server.location} className="w-8 h-auto rounded-sm shadow-sm" />
 
                     {/* Server Info */}
                     <div>
@@ -212,7 +207,7 @@ export default function AddPhone() {
         {selectedServer && name && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
             <div className="flex items-center text-emerald-800">
-              <span className="text-2xl mr-3">{getFlag(selectedServer.location)}</span>
+              <span className="mr-3"><LocationFlag location={selectedServer.location} className="w-7 h-auto rounded-sm shadow-sm" /></span>
               <div>
                 <div className="font-medium">Ready to create "{name}"</div>
                 <div className="text-sm text-emerald-600">

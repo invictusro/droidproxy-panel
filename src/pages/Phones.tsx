@@ -40,20 +40,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Phone, PhoneWithStatus, PhoneGroup } from '../types';
+import Flags from 'country-flag-icons/react/3x2';
 
 // Predefined colors for groups
 const GROUP_COLORS = [
   '#059669', '#0891b2', '#7c3aed', '#d97706', '#dc2626', '#db2777', '#4f46e5', '#0d9488'
 ];
 
-// Convert country code to flag emoji
-const getFlagEmoji = (countryCode: string): string => {
-  if (!countryCode || countryCode.length !== 2) return '';
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map(char => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
+// Country flag component using SVG (works on all platforms)
+const CountryFlag = ({ countryCode, className }: { countryCode: string; className?: string }) => {
+  if (!countryCode || countryCode.length !== 2) return null;
+  const code = countryCode.toUpperCase() as keyof typeof Flags;
+  const FlagComponent = Flags[code];
+  if (!FlagComponent) return <span className="text-xs text-muted-foreground">{countryCode}</span>;
+  return <FlagComponent className={className || "w-5 h-auto rounded-sm"} />;
 };
 
 export default function Phones() {
@@ -817,7 +817,7 @@ export default function Phones() {
                         <TableCell>
                           {phone.sim_country ? (
                             <span className="inline-flex items-center gap-1.5">
-                              <span className="text-lg">{getFlagEmoji(phone.sim_country)}</span>
+                              <CountryFlag countryCode={phone.sim_country} className="w-5 h-auto rounded-sm shadow-sm" />
                               <span className="text-xs text-muted-foreground">{phone.sim_country}</span>
                             </span>
                           ) : (

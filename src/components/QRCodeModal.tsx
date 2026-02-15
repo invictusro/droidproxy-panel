@@ -11,8 +11,8 @@ interface QRCodeModalProps {
   pin?: string;
 }
 
-const APK_LINK = 'proxydroid.com/apk';
-const APK_FULL_URL = 'https://proxydroid.com/apk';
+const APK_LINK = 'droidproxy.com/apk';
+const APK_FULL_URL = 'https://droidproxy.com/apk';
 
 export default function QRCodeModal({ isOpen, onClose, qrData, phoneName, pin }: QRCodeModalProps) {
   const [step, setStep] = useState<'download' | 'pair'>('download');

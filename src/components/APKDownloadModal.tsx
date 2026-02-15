@@ -7,8 +7,8 @@ interface APKDownloadModalProps {
   onClose: () => void;
 }
 
-const APK_LINK = 'proxydroid.com/apk';
-const APK_FULL_URL = 'https://proxydroid.com/apk';
+const APK_LINK = 'droidproxy.com/apk';
+const APK_FULL_URL = 'https://droidproxy.com/apk';
 
 export default function APKDownloadModal({ isOpen, onClose }: APKDownloadModalProps) {
   const [copied, setCopied] = useState(false);
