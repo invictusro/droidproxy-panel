@@ -40,7 +40,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Phone, PhoneWithStatus, PhoneGroup } from '../types';
-import Flags from 'country-flag-icons/react/3x2';
+import * as Flags from 'country-flag-icons/react/3x2';
 
 // Predefined colors for groups
 const GROUP_COLORS = [

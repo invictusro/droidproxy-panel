@@ -6,7 +6,7 @@ import { api } from '../api/client';
 import { useCreatePhone, useDeletePhone } from '../hooks/usePhones';
 import QRCodeModal from '../components/QRCodeModal';
 import type { Server as ServerType, PhoneWithPairing } from '../types';
-import Flags from 'country-flag-icons/react/3x2';
+import * as Flags from 'country-flag-icons/react/3x2';
 
 // Country code mapping from location strings
 const locationToCode: Record<string, string> = {
