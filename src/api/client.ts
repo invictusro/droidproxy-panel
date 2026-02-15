@@ -40,8 +40,8 @@ export const api = {
   // Auth
   login: (email: string, password: string) =>
     client.post('/auth/login', { email, password }),
-  register: (email: string, password: string, name: string) =>
-    client.post('/auth/register', { email, password, name }),
+  register: (email: string, password: string, name: string, telegramUsername?: string) =>
+    client.post('/auth/register', { email, password, name, telegram_username: telegramUsername }),
   getMe: () => client.get('/me'),
   logout: () => client.post('/auth/logout'),
   refreshToken: () => client.post('/auth/refresh'),

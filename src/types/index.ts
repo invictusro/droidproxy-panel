@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   picture: string;
+  telegram_username?: string;
   role: 'user' | 'admin';
   balance: number; // Balance in cents
   created_at: string;

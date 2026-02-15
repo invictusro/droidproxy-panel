@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2, AtSign } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
     email: '',
     password: '',
     name: '',
+    telegram: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,7 +42,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
         localStorage.setItem('token', response.data.token);
         navigate('/phones');
       } else {
-        const response = await api.register(formData.email, formData.password, formData.name);
+        const response = await api.register(formData.email, formData.password, formData.name, formData.telegram || undefined);
         localStorage.setItem('token', response.data.token);
         navigate('/phones');
       }
@@ -190,6 +191,24 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
                       required
                       minLength={6}
                       placeholder="Min 6 characters"
+                      className="pl-10 bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-telegram" className="text-sm font-medium text-foreground">
+                    Telegram <span className="text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <div className="relative">
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      id="register-telegram"
+                      name="telegram"
+                      value={formData.telegram}
+                      onChange={handleChange}
+                      placeholder="username"
                       className="pl-10 bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
                     />
                   </div>
