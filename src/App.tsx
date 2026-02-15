@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Phones from './pages/Phones';
 import AddPhone from './pages/AddPhone';
+import Billing from './pages/Billing';
 import Servers from './pages/admin/Servers';
 import Users from './pages/admin/Users';
 import APIKeys from './pages/api/Keys';
@@ -113,6 +114,7 @@ function AppRoutes() {
         <Route index element={<Navigate to="/phones" replace />} />
         <Route path="phones" element={<Phones />} />
         <Route path="phones/add" element={<AddPhone />} />
+        <Route path="billing" element={<Billing />} />
 
         {/* API routes */}
         <Route path="api/keys" element={<APIKeys />} />

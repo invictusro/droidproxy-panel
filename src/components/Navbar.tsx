@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown } from 'lucide-react';
+import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown, Wallet } from 'lucide-react';
 import APKDownloadModal from './APKDownloadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
 
   const navItems = [
     { path: '/phones', label: 'Phones', icon: Smartphone },
+    { path: '/billing', label: 'Billing', icon: Wallet },
     ...(isAdmin ? [
       { path: '/admin/servers', label: 'Servers', icon: Server },
       { path: '/admin/users', label: 'Users', icon: Users },

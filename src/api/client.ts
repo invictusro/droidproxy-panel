@@ -57,6 +57,23 @@ export const api = {
   deletePaymentMethod: (id: string) => client.delete(`/me/payment-methods/${id}`),
   setDefaultPaymentMethod: (id: string) => client.put(`/me/payment-methods/${id}/default`),
 
+  // Billing (Anniversary Billing System)
+  getBillingOverview: () => client.get('/billing'),
+  createDeposit: (amount: number) => client.post('/billing/deposit', { amount }),
+  getBillingProfile: () => client.get('/billing/profile'),
+  updateBillingProfile: (data: {
+    billing_name?: string;
+    billing_cui?: string;
+    billing_reg_com?: string;
+    billing_address?: string;
+    billing_city?: string;
+    billing_county?: string;
+    billing_country?: string;
+  }) => client.put('/billing/profile', data),
+  getBillingSettings: () => client.get('/billing/settings'),
+  updateBillingSettings: (data: { auto_refill_enabled?: boolean }) =>
+    client.put('/billing/settings', data),
+
   // Plans
   getPlans: () => client.get('/plans'),
 
