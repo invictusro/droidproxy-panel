@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Key, Copy, Check, Trash2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Plus, Key, Copy, Check, Trash2, Eye, EyeOff, AlertCircle, BookOpen } from 'lucide-react';
 import { api } from '../../api/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -330,7 +330,13 @@ export default function APIKeys() {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button variant="outline" asChild>
+              <a href="/docs" className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                View API Docs
+              </a>
+            </Button>
             <Button onClick={() => setShowKeyDialog(false)}>Done</Button>
           </DialogFooter>
         </DialogContent>

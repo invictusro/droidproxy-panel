@@ -9,7 +9,6 @@ import AddPhone from './pages/AddPhone';
 import Servers from './pages/admin/Servers';
 import Users from './pages/admin/Users';
 import APIKeys from './pages/api/Keys';
-import APIDocs from './pages/api/Docs';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +50,19 @@ function APKRedirect() {
   );
 }
 
+// Public API docs redirect
+function DocsRedirect() {
+  window.location.href = '/api-docs.html';
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading API documentation...</p>
+      </div>
+    </div>
+  );
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
@@ -87,6 +99,8 @@ function AppRoutes() {
       } />
       <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
       <Route path="/apk" element={<APKRedirect />} />
+      {/* Public API docs - redirect to standalone page */}
+      <Route path="/docs" element={<DocsRedirect />} />
 
       <Route element={
         <ProtectedRoute>
@@ -99,7 +113,6 @@ function AppRoutes() {
 
         {/* API routes */}
         <Route path="api/keys" element={<APIKeys />} />
-        <Route path="api/docs" element={<APIDocs />} />
 
         {/* Admin routes */}
         <Route path="admin/servers" element={

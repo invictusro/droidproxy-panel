@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Wallet, Calendar, Wifi, AlertTriangle, X, Plus, CreditCard } from 'lucide-react';
 import { api } from '../api/client';
 import { useCentrifugo } from '../hooks/useCentrifugo';
+import TopUpModal from './TopUpModal';
 
 interface StatusBarProps {
   user: { name: string; picture: string; role: string } | null;
@@ -30,7 +31,6 @@ export default function StatusBar({ user, centrifugoToken, centrifugoUrl }: Stat
   // Modal states
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showUpcomingModal, setShowUpcomingModal] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState('10');
 
   // Get phone IDs for Centrifugo subscription
   const phoneIds = useMemo(() => phones.map(p => p.id), [phones]);
@@ -180,63 +180,15 @@ export default function StatusBar({ user, centrifugoToken, centrifugoUrl }: Stat
       </div>
 
       {/* Top-Up Modal */}
-      {showTopUpModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-zinc-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-zinc-900">Top Up Balance</h2>
-              <button onClick={() => setShowTopUpModal(false)} className="p-2 hover:bg-zinc-100 rounded-full">
-                <X className="w-5 h-5 text-zinc-500" />
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <p className="text-sm text-zinc-500 mb-2">Current Balance</p>
-              <p className="text-3xl font-bold text-emerald-600">{formatCents(balance)}</p>
-            </div>
-
-            <div className="mb-6">
-              <p className="text-sm text-zinc-500 mb-3">Select Amount</p>
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {['5', '10', '25', '50'].map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => setTopUpAmount(amount)}
-                    className={`py-3 rounded-lg font-semibold transition-colors ${
-                      topUpAmount === amount
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                    }`}
-                  >
-                    ${amount}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-zinc-500">$</span>
-                <input
-                  type="number"
-                  value={topUpAmount}
-                  onChange={(e) => setTopUpAmount(e.target.value)}
-                  min="1"
-                  className="flex-1 px-3 py-2 border border-zinc-200 rounded-lg text-lg font-semibold"
-                />
-              </div>
-            </div>
-
-            <button
-              className="w-full py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 flex items-center justify-center gap-2"
-            >
-              <CreditCard className="w-5 h-5" />
-              Pay ${topUpAmount}.00
-            </button>
-
-            <p className="text-xs text-zinc-400 text-center mt-4">
-              Secure payment via Stripe
-            </p>
-          </div>
-        </div>
-      )}
+      <TopUpModal
+        isOpen={showTopUpModal}
+        onClose={() => setShowTopUpModal(false)}
+        currentBalance={balance}
+        onSuccess={() => {
+          // Refresh balance after successful top-up
+          api.getBalance().then(res => setBalance(res.data.balance || 0));
+        }}
+      />
 
       {/* Upcoming Charges Modal */}
       {showUpcomingModal && (

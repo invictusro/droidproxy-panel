@@ -49,6 +49,13 @@ export const api = {
   // Balance
   getBalance: () => client.get('/me/balance'),
   getBalanceTransactions: () => client.get('/me/balance/transactions'),
+  createTopUp: (data: { amount: number; payment_method: 'stripe' | 'crypto' }) =>
+    client.post('/me/balance/topup', data),
+
+  // Payment Methods
+  getPaymentMethods: () => client.get('/me/payment-methods'),
+  deletePaymentMethod: (id: string) => client.delete(`/me/payment-methods/${id}`),
+  setDefaultPaymentMethod: (id: string) => client.put(`/me/payment-methods/${id}/default`),
 
   // Plans
   getPlans: () => client.get('/plans'),

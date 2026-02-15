@@ -94,6 +94,7 @@ export interface Phone {
   ram_total_mb?: number;
   device_model?: string;
   os_version?: string;
+  app_version?: number;
   metrics_updated_at?: string;
 
   created_at: string;
@@ -237,7 +238,7 @@ export interface BalanceResponse {
 }
 
 export type TransactionType = 'credit' | 'debit';
-export type TransactionReason = 'license_purchase' | 'license_renewal' | 'admin_credit' | 'admin_debit' | 'refund';
+export type TransactionReason = 'license_purchase' | 'license_renewal' | 'license_upgrade' | 'admin_credit' | 'admin_debit' | 'refund' | 'stripe_topup' | 'auto_charge';
 
 export interface BalanceTransaction {
   id: string;
@@ -248,6 +249,25 @@ export interface BalanceTransaction {
   reference_id?: string;
   description: string;
   created_at: string;
+}
+
+// Payment Methods
+export interface PaymentMethod {
+  id: string;
+  card_brand: string;
+  card_last4: string;
+  card_exp_month: number;
+  card_exp_year: number;
+  is_default: boolean;
+  created_at: string;
+}
+
+// Top-up
+export interface TopUpResponse {
+  payment_url: string;
+  invoice_id?: string;
+  amount: number;
+  status: string;
 }
 
 // License

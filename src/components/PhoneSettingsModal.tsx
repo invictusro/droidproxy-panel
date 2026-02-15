@@ -87,6 +87,7 @@ export default function PhoneSettingsModal({
 
   const [dataUsage, setDataUsage] = useState<DataUsage | null>(null);
   const [uptimeData, setUptimeData] = useState<UptimeData | null>(null);
+  const [uptimePrevDayData, setUptimePrevDayData] = useState<UptimeData | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [usageDateRange, setUsageDateRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [uptimeSelectedDate, setUptimeSelectedDate] = useState<string>(() => getLocalDateString());
@@ -316,12 +317,19 @@ export default function PhoneSettingsModal({
     setLoadingUsage(true);
     try {
       const usageRange = getDateRange(usageDateRange);
-      const [usageRes, uptimeRes] = await Promise.all([
+      // Calculate previous day for timezone handling
+      const prevDate = new Date(uptimeSelectedDate + 'T00:00:00');
+      prevDate.setDate(prevDate.getDate() - 1);
+      const prevDateStr = getLocalDateString(prevDate);
+
+      const [usageRes, uptimeRes, uptimePrevRes] = await Promise.all([
         api.getPhoneDataUsage(phone.id, usageRange.start, usageRange.end),
         api.getPhoneUptime(phone.id, uptimeSelectedDate, uptimeSelectedDate),
+        api.getPhoneUptime(phone.id, prevDateStr, prevDateStr),
       ]);
       setDataUsage(usageRes.data);
       setUptimeData(uptimeRes.data);
+      setUptimePrevDayData(uptimePrevRes.data);
     } catch (error) {
       console.error('Failed to load usage data:', error);
     }
@@ -544,11 +552,19 @@ export default function PhoneSettingsModal({
     // Get timezone offset to convert backend UTC hours to local hours
     const offsetHours = -new Date().getTimezoneOffset() / 60;
 
-    if (uptimeData?.hourly) {
+    if (uptimeData?.hourly || uptimePrevDayData?.hourly) {
       for (let localHour = 0; localHour < 24; localHour++) {
         // Convert local hour to UTC to match backend data
         const utcHour = (localHour - offsetHours + 24) % 24;
-        const hourData = uptimeData.hourly.find(h => h.hour === utcHour);
+
+        // Determine if this UTC hour is from the previous day
+        // If local hour < offset, the UTC hour wraps to previous day
+        const isFromPreviousDay = offsetHours > 0 && localHour < offsetHours;
+
+        // Look in the correct day's data
+        const dataSource = isFromPreviousDay ? uptimePrevDayData : uptimeData;
+        const hourData = dataSource?.hourly?.find(h => h.hour === utcHour);
+
         for (let min = 0; min < 60; min += 5) {
           const timeStr = `${String(localHour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
           if (!hourData || hourData.uptime === 0) {
@@ -708,6 +724,9 @@ export default function PhoneSettingsModal({
                           </div>
                           {phone.os_version && (
                             <span className="text-zinc-400">{phone.os_version}</span>
+                          )}
+                          {phone.app_version && (
+                            <span className="text-xs px-1.5 py-0.5 bg-zinc-200 text-zinc-600 rounded">v{phone.app_version}</span>
                           )}
                           {phone.battery_level !== undefined && (
                             <div className="flex items-center gap-1 text-zinc-600">
@@ -1517,6 +1536,12 @@ export default function PhoneSettingsModal({
                           <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
                             <p className="text-xs text-zinc-500 mb-1">Carrier</p>
                             <p className="text-lg font-medium text-zinc-900">{phone.sim_carrier} {phone.sim_country && `(${phone.sim_country})`}</p>
+                          </div>
+                        )}
+                        {phone.app_version && (
+                          <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+                            <p className="text-xs text-zinc-500 mb-1">App Version</p>
+                            <p className="text-lg font-medium text-zinc-900">{phone.app_version}</p>
                           </div>
                         )}
                         {phone.metrics_updated_at && (

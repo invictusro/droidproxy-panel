@@ -99,10 +99,10 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link to="/api/docs" className="flex items-center gap-2">
+                    <a href="/docs" className="flex items-center gap-2">
                       <BookOpen className="w-4 h-4" />
                       Documentation
-                    </Link>
+                    </a>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

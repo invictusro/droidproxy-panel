@@ -178,7 +178,7 @@
                   "value": {
                     "name": "Customer 1",
                     "auth_type": "userpass",
-                    "proxy_type": "both",
+                    "proxy_type": "socks5",
                     "expires_in_days": 30,
                     "bandwidth_limit": 107374182400
                   }
@@ -199,7 +199,7 @@
                   "id": "660e8400-e29b-41d4-a716-446655440001",
                   "name": "Customer 1",
                   "auth_type": "userpass",
-                  "proxy_type": "both",
+                  "proxy_type": "socks5",
                   "username": "user_a1b2c3d4",
                   "password": "secret_password_here",
                   "port": 10001,
@@ -587,7 +587,7 @@
           },
           "proxy_type": {
             "type": "string",
-            "enum": ["socks5", "http", "both"],
+            "enum": ["socks5", "http"],
             "description": "Proxy protocol"
           },
           "username": {
@@ -670,9 +670,9 @@
           },
           "proxy_type": {
             "type": "string",
-            "enum": ["socks5", "http", "both"],
+            "enum": ["socks5", "http"],
             "default": "socks5",
-            "description": "Proxy protocol"
+            "description": "Proxy protocol (socks5 or http)"
           },
           "allowed_ip": {
             "type": "string",
