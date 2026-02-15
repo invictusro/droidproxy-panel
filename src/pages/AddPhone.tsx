@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MapPin, Server, ChevronRight, Globe } from 'lucide-react';
 import { api } from '../api/client';
-import { useCreatePhone } from '../hooks/usePhones';
+import { useCreatePhone, useDeletePhone } from '../hooks/usePhones';
 import QRCodeModal from '../components/QRCodeModal';
 import type { Server as ServerType, PhoneWithPairing } from '../types';
 import Flags from 'country-flag-icons/react/3x2';
@@ -78,6 +78,7 @@ export default function AddPhone() {
   }, [servers, selectedRegion]);
 
   const createPhone = useCreatePhone();
+  const deletePhone = useDeletePhone();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +95,16 @@ export default function AddPhone() {
   const handleCloseModal = () => {
     setCreatedPhone(null);
     navigate('/phones');
+  };
+
+  const handleCancelPairing = async () => {
+    if (createdPhone) {
+      try {
+        await deletePhone.mutateAsync(createdPhone.phone.id);
+      } catch (error) {
+        console.error('Failed to delete unpaired phone:', error);
+      }
+    }
   };
 
   const selectedServer = servers?.find(s => s.id === serverId);
@@ -251,8 +262,10 @@ export default function AddPhone() {
         <QRCodeModal
           isOpen={true}
           onClose={handleCloseModal}
+          onCancel={handleCancelPairing}
           qrData={createdPhone.qr_code_data}
           phoneName={createdPhone.phone.name}
+          phoneId={createdPhone.phone.id}
           pin={createdPhone.pairing_pin}
         />
       )}
