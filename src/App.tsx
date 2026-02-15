@@ -95,7 +95,10 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={
-        isAuthenticated ? <Navigate to="/phones" replace /> : <Login />
+        isAuthenticated ? <Navigate to="/phones" replace /> : <Login defaultTab="login" />
+      } />
+      <Route path="/register" element={
+        isAuthenticated ? <Navigate to="/phones" replace /> : <Login defaultTab="register" />
       } />
       <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
       <Route path="/apk" element={<APKRedirect />} />

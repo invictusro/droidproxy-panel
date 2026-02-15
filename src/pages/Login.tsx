@@ -10,7 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-export default function Login() {
+interface LoginProps {
+  defaultTab?: 'login' | 'register';
+}
+
+export default function Login({ defaultTab = 'login' }: LoginProps) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -72,7 +76,7 @@ export default function Login() {
         </CardHeader>
 
         <CardContent className="pt-4">
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-zinc-100 border border-zinc-200 mb-6 p-1 rounded-lg">
               <TabsTrigger value="login" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">Login</TabsTrigger>
               <TabsTrigger value="register" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">Register</TabsTrigger>
