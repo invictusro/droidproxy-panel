@@ -69,6 +69,7 @@ export const api = {
   updatePhone: (id: string, data: { name?: string }) => client.patch(`/phones/${id}`, data),
   rotateIP: (id: string) => client.post(`/phones/${id}/rotate-ip`),
   restartProxy: (id: string) => client.post(`/phones/${id}/restart`),
+  findPhone: (id: string) => client.post(`/phones/${id}/find`),
   getPhoneStats: (id: string) => client.get(`/phones/${id}/stats`),
 
   // Connection Credentials
