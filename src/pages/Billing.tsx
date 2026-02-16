@@ -9,7 +9,8 @@ import {
   ArrowDownRight,
   Bitcoin,
   CheckCircle2,
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -47,12 +48,15 @@ const DEPOSIT_AMOUNTS = [
   { value: 25000, label: '$250' },
 ];
 
+const INITIAL_TRANSACTIONS_SHOWN = 5;
+
 export default function Billing() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedAmount, setSelectedAmount] = useState<number>(5000);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [isStripeLoading, setIsStripeLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
 
   const { data: billing, isLoading } = useQuery<BillingOverview>({
     queryKey: ['billing'],
@@ -138,6 +142,12 @@ export default function Billing() {
         return nextDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
       })()
     : null;
+
+  const visibleTransactions = showAllTransactions
+    ? billing.recent_transactions
+    : billing.recent_transactions?.slice(0, INITIAL_TRANSACTIONS_SHOWN);
+
+  const hasMoreTransactions = billing.recent_transactions && billing.recent_transactions.length > INITIAL_TRANSACTIONS_SHOWN;
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -265,39 +275,80 @@ export default function Billing() {
         </div>
 
         {/* Payment Method Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <button
-            onClick={handleStripeDeposit}
-            disabled={isStripeLoading}
-            className="py-4 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-3"
-          >
-            {isStripeLoading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-            ) : (
-              <>
-                <CreditCard className="w-5 h-5" />
-                <div className="text-left">
-                  <div>Pay with Card</div>
-                  <div className="text-xs opacity-80">Enables auto-refill</div>
-                </div>
-              </>
-            )}
-          </button>
+        <div className="space-y-3">
+          {/* Card Payment */}
+          <div className="border-2 border-zinc-200 rounded-xl hover:border-emerald-500 transition-colors">
+            <button
+              onClick={handleStripeDeposit}
+              disabled={isStripeLoading}
+              className="w-full flex items-center gap-3 p-4"
+            >
+              <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-zinc-900">Pay with Card</p>
+                <p className="text-sm text-zinc-500">
+                  {billing.has_payment_method
+                    ? 'Use saved card or add new'
+                    : 'Card will be saved for auto-renewal'}
+                </p>
+              </div>
+              {isStripeLoading && (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600" />
+              )}
+            </button>
 
-          <button
-            onClick={handleCryptoDeposit}
-            className="py-4 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-3"
-          >
-            <Bitcoin className="w-5 h-5" />
-            <div className="text-left">
-              <div>Pay with Crypto</div>
-              <div className="text-xs opacity-80">BTC, ETH, USDT</div>
+            {/* Payment method icons */}
+            <div className="px-4 pb-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <img src="/assets/payments/visa.svg" alt="Visa" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/mastercard.svg" alt="Mastercard" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/unionpay.svg" alt="UnionPay" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/amex.svg" alt="American Express" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/applepay.svg" alt="Apple Pay" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/googlepay.svg" alt="Google Pay" className="h-7 w-11 object-contain" />
+              </div>
             </div>
-          </button>
+
+            {/* Terms disclaimer */}
+            <div className="px-4 pb-4">
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                By choosing this payment method, you agree to the Terms of Payment and a subscription setup.
+                If your balance is insufficient to renew Connections, the missing amount will be charged
+                automatically from your card every 30 days.
+              </p>
+            </div>
+          </div>
+
+          {/* Crypto Payment */}
+          <div className="border-2 border-zinc-200 rounded-xl hover:border-orange-500 transition-colors">
+            <button
+              onClick={handleCryptoDeposit}
+              className="w-full flex items-center gap-3 p-4"
+            >
+              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Bitcoin className="w-5 h-5 text-orange-600" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-zinc-900">Pay with Crypto</p>
+                <p className="text-sm text-zinc-500">BTC, ETH, USDT accepted</p>
+              </div>
+            </button>
+
+            {/* Crypto disclaimer */}
+            <div className="px-4 pb-4">
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                Crypto payments do not enable auto-renewal. You will need to manually top up your balance
+                before it runs out to avoid service interruption.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <p className="text-xs text-zinc-400 mt-4 text-center">
-          Card payments enable automatic monthly billing. Crypto payments require manual top-up.
+        {/* VAT notice */}
+        <p className="text-xs text-zinc-500 text-center mt-4">
+          <span className="font-medium">Fees charged by payment systems and VAT</span> are applied during payment processing and are not included in the DroidProxy subscription price.
         </p>
       </div>
 
@@ -306,7 +357,7 @@ export default function Billing() {
         <div className="bg-white rounded-2xl p-6 border border-zinc-200">
           <h3 className="font-semibold text-zinc-900 mb-4">Transactions (Last 30 Days)</h3>
           <div className="space-y-3">
-            {billing.recent_transactions.map((tx) => (
+            {visibleTransactions?.map((tx) => (
               <div key={tx.id} className="flex items-center justify-between py-3 border-b border-zinc-100 last:border-0">
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -329,6 +380,26 @@ export default function Billing() {
               </div>
             ))}
           </div>
+
+          {/* Show more button */}
+          {hasMoreTransactions && !showAllTransactions && (
+            <button
+              onClick={() => setShowAllTransactions(true)}
+              className="w-full mt-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 flex items-center justify-center gap-1 hover:bg-zinc-50 rounded-lg transition-colors"
+            >
+              Show all {billing.recent_transactions.length} transactions
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          )}
+
+          {showAllTransactions && hasMoreTransactions && (
+            <button
+              onClick={() => setShowAllTransactions(false)}
+              className="w-full mt-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 flex items-center justify-center gap-1 hover:bg-zinc-50 rounded-lg transition-colors"
+            >
+              Show less
+            </button>
+          )}
         </div>
       )}
     </div>
