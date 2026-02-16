@@ -301,10 +301,10 @@ export default function Billing() {
         </p>
       </div>
 
-      {/* Recent Transactions */}
+      {/* Transactions - Last 30 Days */}
       {billing.recent_transactions && billing.recent_transactions.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-zinc-200">
-          <h3 className="font-semibold text-zinc-900 mb-4">Recent Transactions</h3>
+          <h3 className="font-semibold text-zinc-900 mb-4">Transactions (Last 30 Days)</h3>
           <div className="space-y-3">
             {billing.recent_transactions.map((tx) => (
               <div key={tx.id} className="flex items-center justify-between py-3 border-b border-zinc-100 last:border-0">
