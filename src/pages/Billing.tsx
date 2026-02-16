@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   CreditCard,
   Wallet,
-  RefreshCw,
   Calendar,
-  Building2,
-  ChevronRight,
-  AlertCircle,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Bitcoin
 } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -37,15 +34,6 @@ interface BillingOverview {
     description: string;
     created_at: string;
   }>;
-  billing_profile: {
-    billing_name: string;
-    billing_cui: string;
-    billing_reg_com: string;
-    billing_address: string;
-    billing_city: string;
-    billing_county: string;
-    billing_country: string;
-  };
 }
 
 const DEPOSIT_AMOUNTS = [
@@ -57,10 +45,9 @@ const DEPOSIT_AMOUNTS = [
 ];
 
 export default function Billing() {
-  const queryClient = useQueryClient();
   const [selectedAmount, setSelectedAmount] = useState<number>(5000);
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [showBillingProfile, setShowBillingProfile] = useState(false);
+  const [isStripeLoading, setIsStripeLoading] = useState(false);
 
   const { data: billing, isLoading } = useQuery<BillingOverview>({
     queryKey: ['billing'],
@@ -70,28 +57,34 @@ export default function Billing() {
     },
   });
 
-  const depositMutation = useMutation({
-    mutationFn: (amount: number) => api.createDeposit(amount),
-    onSuccess: (res) => {
-      // Redirect to Stripe checkout
-      window.location.href = res.data.checkout_url;
-    },
-  });
+  const getAmount = () => {
+    return customAmount ? parseInt(customAmount) * 100 : selectedAmount;
+  };
 
-  const toggleAutoRefillMutation = useMutation({
-    mutationFn: (enabled: boolean) => api.updateBillingSettings({ auto_refill_enabled: enabled }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['billing'] });
-    },
-  });
-
-  const handleDeposit = () => {
-    const amount = customAmount ? parseInt(customAmount) * 100 : selectedAmount;
+  const handleStripeDeposit = async () => {
+    const amount = getAmount();
     if (amount < 1000) {
       alert('Minimum deposit is $10');
       return;
     }
-    depositMutation.mutate(amount);
+    setIsStripeLoading(true);
+    try {
+      const res = await api.createDeposit(amount);
+      window.location.href = res.data.checkout_url;
+    } catch {
+      alert('Failed to create checkout session');
+      setIsStripeLoading(false);
+    }
+  };
+
+  const handleCryptoDeposit = () => {
+    const amount = getAmount();
+    if (amount < 1000) {
+      alert('Minimum deposit is $10');
+      return;
+    }
+    // TODO: Implement crypto deposit flow
+    alert('Crypto deposits coming soon! Contact support for manual crypto payments.');
   };
 
   const formatDate = (dateStr: string) => {
@@ -137,7 +130,7 @@ export default function Billing() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Billing</h1>
-        <p className="text-zinc-500 mt-1">Manage your balance and billing settings</p>
+        <p className="text-zinc-500 mt-1">Manage your balance and add funds</p>
       </div>
 
       {/* Balance & Monthly Burn */}
@@ -171,50 +164,17 @@ export default function Billing() {
             <>
               <div className="text-lg text-zinc-500">Not set</div>
               <div className="mt-2 text-sm text-zinc-400">
-                Make a deposit to set your billing day
+                Pay with card to enable auto-refill
               </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Auto-Refill Settings */}
-      <div className="bg-white rounded-2xl p-6 border border-zinc-200">
-        <div className="flex items-center justify-between">
+      {/* Saved Card Info */}
+      {billing.has_payment_method && billing.default_card && (
+        <div className="bg-white rounded-2xl p-4 border border-zinc-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <RefreshCw className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-zinc-900">Auto-Refill</h3>
-              <p className="text-sm text-zinc-500">
-                Automatically charge your card on billing day to cover phone costs
-              </p>
-            </div>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={billing.auto_refill_enabled}
-              onChange={(e) => toggleAutoRefillMutation.mutate(e.target.checked)}
-              className="sr-only peer"
-              disabled={!billing.has_payment_method}
-            />
-            <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-disabled:opacity-50"></div>
-          </label>
-        </div>
-
-        {!billing.has_payment_method && (
-          <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-800">
-              Add a payment method to enable auto-refill. Your card will be saved when you make a deposit.
-            </div>
-          </div>
-        )}
-
-        {billing.has_payment_method && billing.default_card && (
-          <div className="mt-4 flex items-center gap-3 p-3 bg-zinc-50 rounded-lg">
             <CreditCard className="w-5 h-5 text-zinc-400" />
             <div className="text-sm">
               <span className="text-zinc-900 font-medium capitalize">{billing.default_card.card_brand}</span>
@@ -223,9 +183,12 @@ export default function Billing() {
                 Expires {billing.default_card.card_exp_month}/{billing.default_card.card_exp_year}
               </span>
             </div>
+            <span className="ml-auto text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded">
+              Auto-refill enabled
+            </span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Add Funds */}
       <div className="bg-white rounded-2xl p-6 border border-zinc-200">
@@ -250,7 +213,7 @@ export default function Billing() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-6">
           <span className="text-zinc-500 text-sm">Or enter custom amount:</span>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">$</span>
@@ -268,82 +231,41 @@ export default function Billing() {
           </div>
         </div>
 
-        <button
-          onClick={handleDeposit}
-          disabled={depositMutation.isPending}
-          className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {depositMutation.isPending ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-          ) : (
-            <>
-              <CreditCard className="w-5 h-5" />
-              Continue to Payment
-            </>
-          )}
-        </button>
+        {/* Payment Method Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            onClick={handleStripeDeposit}
+            disabled={isStripeLoading}
+            className="py-4 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-3"
+          >
+            {isStripeLoading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+            ) : (
+              <>
+                <CreditCard className="w-5 h-5" />
+                <div className="text-left">
+                  <div>Pay with Card</div>
+                  <div className="text-xs opacity-80">Enables auto-refill</div>
+                </div>
+              </>
+            )}
+          </button>
 
-        <p className="text-xs text-zinc-400 mt-3 text-center">
-          You'll be redirected to Stripe to complete payment. VAT will be calculated automatically.
-        </p>
-      </div>
-
-      {/* Billing Profile */}
-      <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
-        <button
-          onClick={() => setShowBillingProfile(!showBillingProfile)}
-          className="w-full p-6 flex items-center justify-between hover:bg-zinc-50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-zinc-600" />
-            </div>
+          <button
+            onClick={handleCryptoDeposit}
+            className="py-4 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-3"
+          >
+            <Bitcoin className="w-5 h-5" />
             <div className="text-left">
-              <h3 className="font-semibold text-zinc-900">Billing Profile</h3>
-              <p className="text-sm text-zinc-500">
-                {billing.billing_profile.billing_name || 'Not configured'}
-                {billing.billing_profile.billing_cui && ` · ${billing.billing_profile.billing_cui}`}
-              </p>
+              <div>Pay with Crypto</div>
+              <div className="text-xs opacity-80">BTC, ETH, USDT</div>
             </div>
-          </div>
-          <ChevronRight className={`w-5 h-5 text-zinc-400 transition-transform ${showBillingProfile ? 'rotate-90' : ''}`} />
-        </button>
+          </button>
+        </div>
 
-        {showBillingProfile && (
-          <div className="px-6 pb-6 border-t border-zinc-100">
-            <div className="pt-4 grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-zinc-500">Company/Name</span>
-                <p className="text-zinc-900">{billing.billing_profile.billing_name || '-'}</p>
-              </div>
-              <div>
-                <span className="text-zinc-500">Tax ID (CUI)</span>
-                <p className="text-zinc-900">{billing.billing_profile.billing_cui || '-'}</p>
-              </div>
-              <div>
-                <span className="text-zinc-500">Reg. Com</span>
-                <p className="text-zinc-900">{billing.billing_profile.billing_reg_com || '-'}</p>
-              </div>
-              <div>
-                <span className="text-zinc-500">Country</span>
-                <p className="text-zinc-900">{billing.billing_profile.billing_country || '-'}</p>
-              </div>
-              <div className="col-span-2">
-                <span className="text-zinc-500">Address</span>
-                <p className="text-zinc-900">
-                  {[
-                    billing.billing_profile.billing_address,
-                    billing.billing_profile.billing_city,
-                    billing.billing_profile.billing_county,
-                  ].filter(Boolean).join(', ') || '-'}
-                </p>
-              </div>
-            </div>
-            <p className="text-xs text-zinc-400 mt-4">
-              Billing profile is automatically synced from Stripe during checkout.
-            </p>
-          </div>
-        )}
+        <p className="text-xs text-zinc-400 mt-4 text-center">
+          Card payments enable automatic monthly billing. Crypto payments require manual top-up.
+        </p>
       </div>
 
       {/* Recent Transactions */}
