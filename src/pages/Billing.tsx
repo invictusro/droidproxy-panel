@@ -315,8 +315,8 @@ export default function Billing() {
             <div className="px-4 pb-4">
               <p className="text-[11px] text-zinc-500 leading-relaxed">
                 By choosing this payment method, you agree to the Terms of Payment and a subscription setup.
-                If your balance is insufficient to renew Connections, the missing amount will be charged
-                automatically from your card every 30 days.
+                If your balance is insufficient to renew phones with auto-renew enabled, the missing amount
+                will be charged automatically from your card monthly.
               </p>
             </div>
           </div>
