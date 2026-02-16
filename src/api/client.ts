@@ -73,6 +73,7 @@ export const api = {
   getBillingSettings: () => client.get('/billing/settings'),
   updateBillingSettings: (data: { auto_refill_enabled?: boolean }) =>
     client.put('/billing/settings', data),
+  getInvoices: () => client.get('/billing/invoices'),
 
   // Plans
   getPlans: () => client.get('/plans'),

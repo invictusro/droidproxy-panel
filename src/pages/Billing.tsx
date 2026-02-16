@@ -10,7 +10,9 @@ import {
   Bitcoin,
   CheckCircle2,
   X,
-  ChevronDown
+  ChevronDown,
+  FileText,
+  Download
 } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -40,6 +42,20 @@ interface BillingOverview {
   }>;
 }
 
+interface Invoice {
+  id: string;
+  number: string;
+  status: string;
+  amount: number;
+  amount_formatted: string;
+  currency: string;
+  description: string;
+  invoice_pdf: string;
+  hosted_url: string;
+  created_at: number;
+  paid_at?: number;
+}
+
 const DEPOSIT_AMOUNTS = [
   { value: 1000, label: '$10' },
   { value: 2500, label: '$25' },
@@ -62,6 +78,14 @@ export default function Billing() {
     queryKey: ['billing'],
     queryFn: async () => {
       const res = await api.getBillingOverview();
+      return res.data;
+    },
+  });
+
+  const { data: invoicesData } = useQuery<{ invoices: Invoice[] }>({
+    queryKey: ['invoices'],
+    queryFn: async () => {
+      const res = await api.getInvoices();
       return res.data;
     },
   });
@@ -112,6 +136,14 @@ export default function Billing() {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+    });
+  };
+
+  const formatInvoiceDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
   };
 
@@ -403,6 +435,44 @@ export default function Billing() {
               Show less
             </button>
           )}
+        </div>
+      )}
+
+      {/* Invoices - only show if there are invoices */}
+      {invoicesData?.invoices && invoicesData.invoices.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 border border-zinc-200">
+          <h3 className="font-semibold text-zinc-900 mb-4">Invoices</h3>
+          <div className="space-y-3">
+            {invoicesData.invoices.map((invoice) => (
+              <div key={invoice.id} className="flex items-center justify-between py-3 border-b border-zinc-100 last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-zinc-900">
+                      Invoice #{invoice.number}
+                    </div>
+                    <div className="text-xs text-zinc-500">
+                      {formatInvoiceDate(invoice.paid_at || invoice.created_at)} · {invoice.description}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-zinc-900">{invoice.amount_formatted}</span>
+                  <a
+                    href={invoice.invoice_pdf}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    title="Download PDF"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
