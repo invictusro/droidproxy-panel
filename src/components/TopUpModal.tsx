@@ -162,22 +162,22 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
 
               {/* Payment Options */}
               <div className="space-y-3">
-                {/* Stripe Payment */}
-                <div className="border-2 border-gray-200 rounded-lg hover:border-emerald-500 transition-colors">
-                  <button
-                    onClick={handleStripePayment}
-                    disabled={isLoading}
-                    className="w-full flex items-center gap-3 p-4"
-                  >
+                {/* Stripe Payment - entire card is clickable */}
+                <button
+                  onClick={handleStripePayment}
+                  disabled={isLoading}
+                  className="w-full text-left border-2 border-gray-200 rounded-lg hover:border-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="flex items-center gap-3 p-4">
                     <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
                       <CreditCard className="w-5 h-5 text-indigo-600" />
                     </div>
-                    <div className="flex-1 text-left">
+                    <div className="flex-1">
                       <p className="font-medium">Pay with Card</p>
                       <p className="text-sm text-gray-500">Card will be saved for auto-renewal</p>
                     </div>
                     {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
-                  </button>
+                  </div>
 
                   {/* Payment method icons */}
                   <div className="px-4 pb-3">
@@ -196,13 +196,13 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
 
                   {/* Terms disclaimer */}
                   <div className="px-4 pb-4">
-                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                    <p className="text-xs text-gray-500 leading-relaxed">
                       By choosing this payment method, you agree to the Terms of Payment and a subscription setup.
                       If your balance is insufficient to renew phones with auto-renew enabled, the missing amount
                       will be charged automatically from your card monthly.
                     </p>
                   </div>
-                </div>
+                </button>
 
                 {/* Crypto Payment (Coming Soon) */}
                 <button

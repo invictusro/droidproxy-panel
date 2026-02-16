@@ -276,17 +276,17 @@ export default function Billing() {
 
         {/* Payment Method Selection */}
         <div className="space-y-3">
-          {/* Card Payment */}
-          <div className="border-2 border-zinc-200 rounded-xl hover:border-emerald-500 transition-colors">
-            <button
-              onClick={handleStripeDeposit}
-              disabled={isStripeLoading}
-              className="w-full flex items-center gap-3 p-4"
-            >
+          {/* Card Payment - entire card is clickable */}
+          <button
+            onClick={handleStripeDeposit}
+            disabled={isStripeLoading}
+            className="w-full text-left border-2 border-zinc-200 rounded-xl hover:border-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="flex items-center gap-3 p-4">
               <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
                 <CreditCard className="w-5 h-5 text-indigo-600" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1">
                 <p className="font-medium text-zinc-900">Pay with Card</p>
                 <p className="text-sm text-zinc-500">
                   {billing.has_payment_method
@@ -297,7 +297,7 @@ export default function Billing() {
               {isStripeLoading && (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600" />
               )}
-            </button>
+            </div>
 
             {/* Payment method icons */}
             <div className="px-4 pb-3">
@@ -316,37 +316,37 @@ export default function Billing() {
 
             {/* Terms disclaimer */}
             <div className="px-4 pb-4">
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
+              <p className="text-xs text-zinc-500 leading-relaxed">
                 By choosing this payment method, you agree to the Terms of Payment and a subscription setup.
                 If your balance is insufficient to renew phones with auto-renew enabled, the missing amount
                 will be charged automatically from your card monthly.
               </p>
             </div>
-          </div>
+          </button>
 
-          {/* Crypto Payment */}
-          <div className="border-2 border-zinc-200 rounded-xl hover:border-orange-500 transition-colors">
-            <button
-              onClick={handleCryptoDeposit}
-              className="w-full flex items-center gap-3 p-4"
-            >
+          {/* Crypto Payment - entire card is clickable */}
+          <button
+            onClick={handleCryptoDeposit}
+            className="w-full text-left border-2 border-zinc-200 rounded-xl hover:border-orange-500 transition-colors"
+          >
+            <div className="flex items-center gap-3 p-4">
               <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
                 <Bitcoin className="w-5 h-5 text-orange-600" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1">
                 <p className="font-medium text-zinc-900">Pay with Crypto</p>
                 <p className="text-sm text-zinc-500">BTC, ETH, USDT accepted</p>
               </div>
-            </button>
+            </div>
 
             {/* Crypto disclaimer */}
             <div className="px-4 pb-4">
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
+              <p className="text-xs text-zinc-500 leading-relaxed">
                 Crypto payments do not enable auto-renewal. You will need to manually top up your balance
                 before it runs out to avoid service interruption.
               </p>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* VAT notice */}
