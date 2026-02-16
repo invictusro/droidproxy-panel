@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   CreditCard,
   Wallet,
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
-  Bitcoin
+  Bitcoin,
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -45,9 +48,11 @@ const DEPOSIT_AMOUNTS = [
 ];
 
 export default function Billing() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedAmount, setSelectedAmount] = useState<number>(5000);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [isStripeLoading, setIsStripeLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const { data: billing, isLoading } = useQuery<BillingOverview>({
     queryKey: ['billing'],
@@ -56,6 +61,15 @@ export default function Billing() {
       return res.data;
     },
   });
+
+  // Check for success/cancelled params
+  useEffect(() => {
+    if (searchParams.get('deposit') === 'success') {
+      setShowSuccess(true);
+      // Clear the URL param
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const getAmount = () => {
     return customAmount ? parseInt(customAmount) * 100 : selectedAmount;
@@ -127,6 +141,25 @@ export default function Billing() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Success Banner */}
+      {showSuccess && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <div>
+              <p className="font-medium text-emerald-900">Payment successful!</p>
+              <p className="text-sm text-emerald-700">Your balance has been updated.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSuccess(false)}
+            className="text-emerald-600 hover:text-emerald-800"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Billing</h1>
