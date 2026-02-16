@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { X, CreditCard, Wallet, Loader2, Check, Trash2, Bitcoin } from 'lucide-react';
+import { X, CreditCard, Wallet, Loader2, Bitcoin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/api/client';
-import type { PaymentMethod } from '@/types';
 
 interface TopUpModalProps {
   isOpen: boolean;
@@ -24,29 +23,14 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [loadingMethods, setLoadingMethods] = useState(false);
 
   if (!isOpen) return null;
-
-  const loadPaymentMethods = async () => {
-    setLoadingMethods(true);
-    try {
-      const response = await api.getPaymentMethods();
-      setPaymentMethods(response.data.payment_methods || []);
-    } catch (error) {
-      console.error('Failed to load payment methods:', error);
-    } finally {
-      setLoadingMethods(false);
-    }
-  };
 
   const handleAmountContinue = () => {
     const amount = selectedAmount || (customAmount ? Math.round(parseFloat(customAmount) * 100) : 0);
     if (amount < 500) {
       return; // Min $5
     }
-    loadPaymentMethods();
     setStep('method');
   };
 
@@ -69,35 +53,8 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
     }
   };
 
-  const handleDeletePaymentMethod = async (methodId: string) => {
-    if (!confirm('Remove this payment method?')) return;
-
-    try {
-      await api.deletePaymentMethod(methodId);
-      setPaymentMethods(methods => methods.filter(m => m.id !== methodId));
-    } catch (error) {
-      console.error('Failed to delete payment method:', error);
-    }
-  };
-
-  const handleSetDefault = async (methodId: string) => {
-    try {
-      await api.setDefaultPaymentMethod(methodId);
-      setPaymentMethods(methods =>
-        methods.map(m => ({ ...m, is_default: m.id === methodId }))
-      );
-    } catch (error) {
-      console.error('Failed to set default payment method:', error);
-    }
-  };
-
   const getAmount = () => selectedAmount || (customAmount ? Math.round(parseFloat(customAmount) * 100) : 0);
   const isValidAmount = getAmount() >= 500;
-
-  const getCardBrandIcon = (brand: string) => {
-    // Simple text representation - could be replaced with actual card brand icons
-    return brand.charAt(0).toUpperCase() + brand.slice(1);
-  };
 
   const handleBack = () => {
     setStep('amount');
@@ -203,60 +160,6 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
                 <p className="text-2xl font-bold text-emerald-900">${(getAmount() / 100).toFixed(2)}</p>
               </div>
 
-              <p className="text-sm font-medium text-gray-700">Select payment method:</p>
-
-              {/* Saved Payment Methods */}
-              {loadingMethods ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                </div>
-              ) : paymentMethods.length > 0 ? (
-                <div className="space-y-2 mb-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Saved Cards</p>
-                  {paymentMethods.map((method) => (
-                    <div
-                      key={method.id}
-                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <CreditCard className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium text-sm">
-                            {getCardBrandIcon(method.card_brand)} ****{method.card_last4}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Expires {method.card_exp_month}/{method.card_exp_year}
-                          </p>
-                        </div>
-                        {method.is_default && (
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded">
-                            Default
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {!method.is_default && (
-                          <button
-                            onClick={() => handleSetDefault(method.id)}
-                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                            title="Set as default"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeletePaymentMethod(method.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                          title="Remove card"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
               {/* Payment Options */}
               <div className="space-y-3">
                 {/* Stripe Payment */}
@@ -271,11 +174,7 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-medium">Pay with Card</p>
-                      <p className="text-sm text-gray-500">
-                        {paymentMethods.length > 0
-                          ? 'Use saved card or add new'
-                          : 'Card will be saved for auto-renewal'}
-                      </p>
+                      <p className="text-sm text-gray-500">Card will be saved for auto-renewal</p>
                     </div>
                     {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
                   </button>
@@ -289,8 +188,6 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
                       <img src="/assets/payments/amex.svg" alt="American Express" className="h-7 w-11 object-contain" />
                       <img src="/assets/payments/applepay.svg" alt="Apple Pay" className="h-7 w-11 object-contain" />
                       <img src="/assets/payments/googlepay.svg" alt="Google Pay" className="h-7 w-11 object-contain" />
-                      <img src="/assets/payments/wechatpay.svg" alt="WeChat Pay" className="h-7 w-11 object-contain" />
-                      <img src="/assets/payments/discover.svg" alt="Discover" className="h-7 w-11 object-contain" />
                       <img src="/assets/payments/jcb.svg" alt="JCB" className="h-7 w-11 object-contain" />
                       <img src="/assets/payments/diners.svg" alt="Diners Club" className="h-7 w-11 object-contain" />
                       <img src="/assets/payments/klarna.svg" alt="Klarna" className="h-7 w-11 object-contain" />
@@ -301,8 +198,8 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
                   <div className="px-4 pb-4">
                     <p className="text-[11px] text-gray-500 leading-relaxed">
                       By choosing this payment method, you agree to the Terms of Payment and a subscription setup.
-                      If your balance is insufficient to renew Connections, the missing amount will be charged
-                      automatically from your card every 30 days.
+                      If your balance is insufficient to renew phones with auto-renew enabled, the missing amount
+                      will be charged automatically from your card monthly.
                     </p>
                   </div>
                 </div>

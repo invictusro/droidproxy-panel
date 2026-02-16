@@ -308,6 +308,9 @@ export default function Billing() {
                 <img src="/assets/payments/amex.svg" alt="American Express" className="h-7 w-11 object-contain" />
                 <img src="/assets/payments/applepay.svg" alt="Apple Pay" className="h-7 w-11 object-contain" />
                 <img src="/assets/payments/googlepay.svg" alt="Google Pay" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/jcb.svg" alt="JCB" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/diners.svg" alt="Diners Club" className="h-7 w-11 object-contain" />
+                <img src="/assets/payments/klarna.svg" alt="Klarna" className="h-7 w-11 object-contain" />
               </div>
             </div>
 
