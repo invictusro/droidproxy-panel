@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, Search, UserCheck, Users as UsersIcon, DollarSign, Smartphone, TrendingUp } from 'lucide-react';
+import { Trash2, Search, UserCheck, Users as UsersIcon, DollarSign, Smartphone, TrendingUp, CreditCard, Key, Calendar } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { api } from '../../api/client';
 import type { User } from '../../types';
 
@@ -8,19 +9,35 @@ interface UserWithStats extends User {
   phone_count: number;
 }
 
+interface DailyStat {
+  date: string;
+  new_users: number;
+  revenue: number;
+  licenses_sold: number;
+}
+
 interface UserStats {
   total_users: number;
   users_today: number;
   users_this_week: number;
+  users_this_month: number;
   active_users_today: number;
+  users_with_balance: number;
   balance_spent_today: number;
   balance_spent_yesterday: number;
   total_balance: number;
   total_phones: number;
+  paired_phones: number;
+  pending_phones: number;
   active_licenses: number;
+  total_credentials: number;
+  phones_by_plan: { plan_tier: string; count: number }[];
   revenue_this_week: number;
+  revenue_this_month: number;
+  total_revenue: number;
   top_users_by_balance: { id: string; name: string; email: string; balance: number }[];
   top_users_by_phones: { id: string; name: string; email: string; phone_count: number }[];
+  daily_stats: DailyStat[];
 }
 
 export default function Users() {
@@ -122,56 +139,179 @@ export default function Users() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <UsersIcon className="w-4 h-4" />
-              Total Users
+        <>
+          {/* Row 1: Users & Activity */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <UsersIcon className="w-4 h-4" />
+                Total Users
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.total_users}</div>
+              <div className="text-xs text-emerald-600">+{stats.users_today} today</div>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.total_users}</div>
-            <div className="text-xs text-emerald-600">+{stats.users_today} today</div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <Calendar className="w-4 h-4" />
+                New This Month
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.users_this_month}</div>
+              <div className="text-xs text-gray-500">{stats.users_this_week} this week</div>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <UserCheck className="w-4 h-4" />
+                Active Today
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.active_users_today}</div>
+              <div className="text-xs text-gray-500">{stats.users_with_balance} with balance</div>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <DollarSign className="w-4 h-4" />
+                Spent Today
+              </div>
+              <div className="text-2xl font-bold text-gray-900">${stats.balance_spent_today.toFixed(2)}</div>
+              <div className="text-xs text-gray-500">Yesterday: ${stats.balance_spent_yesterday.toFixed(2)}</div>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <DollarSign className="w-4 h-4" />
+                Total Balance
+              </div>
+              <div className="text-2xl font-bold text-emerald-600">${stats.total_balance.toFixed(2)}</div>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <CreditCard className="w-4 h-4" />
+                Total Revenue
+              </div>
+              <div className="text-2xl font-bold text-emerald-600">${stats.total_revenue.toFixed(2)}</div>
+              <div className="text-xs text-gray-500">${stats.revenue_this_month.toFixed(2)} this month</div>
+            </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <UserCheck className="w-4 h-4" />
-              Active Today
+          {/* Row 2: Phones & Infrastructure */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <Smartphone className="w-4 h-4" />
+                Total Phones
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.total_phones}</div>
+              <div className="text-xs text-gray-500">{stats.paired_phones} paired, {stats.pending_phones} pending</div>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.active_users_today}</div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <TrendingUp className="w-4 h-4" />
+                Active Licenses
+              </div>
+              <div className="text-2xl font-bold text-emerald-600">{stats.active_licenses}</div>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <Key className="w-4 h-4" />
+                Total Credentials
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.total_credentials}</div>
+            </div>
+
+            {/* Phones by Plan */}
+            {stats.phones_by_plan?.length > 0 && stats.phones_by_plan.map((plan) => (
+              <div key={plan.plan_tier} className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <Smartphone className="w-4 h-4" />
+                  {plan.plan_tier.charAt(0).toUpperCase() + plan.plan_tier.slice(1)} Plan
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{plan.count}</div>
+              </div>
+            ))}
+
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                <TrendingUp className="w-4 h-4" />
+                Revenue (7d)
+              </div>
+              <div className="text-2xl font-bold text-emerald-600">${stats.revenue_this_week.toFixed(2)}</div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Charts */}
+      {stats && stats.daily_stats && stats.daily_stats.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Daily New Users Chart */}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-4">Daily New Users (30 days)</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={stats.daily_stats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  interval="preserveStartEnd"
+                />
+                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                <Tooltip
+                  labelFormatter={(value) => new Date(value as string).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  formatter={(value) => [value, 'New Users']}
+                />
+                <Bar dataKey="new_users" fill="#10b981" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
 
+          {/* Daily Revenue Chart */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <DollarSign className="w-4 h-4" />
-              Spent Today
-            </div>
-            <div className="text-2xl font-bold text-gray-900">${stats.balance_spent_today.toFixed(2)}</div>
-            <div className="text-xs text-gray-500">Yesterday: ${stats.balance_spent_yesterday.toFixed(2)}</div>
+            <h3 className="font-semibold text-gray-900 mb-4">Daily Revenue (30 days)</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={stats.daily_stats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  interval="preserveStartEnd"
+                />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `$${value}`} />
+                <Tooltip
+                  labelFormatter={(value) => new Date(value as string).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
+                />
+                <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
 
+          {/* Daily Licenses Sold Chart */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <DollarSign className="w-4 h-4" />
-              Total Balance
-            </div>
-            <div className="text-2xl font-bold text-emerald-600">${stats.total_balance.toFixed(2)}</div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <Smartphone className="w-4 h-4" />
-              Total Phones
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.total_phones}</div>
-            <div className="text-xs text-emerald-600">{stats.active_licenses} licensed</div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-              <TrendingUp className="w-4 h-4" />
-              Revenue (7d)
-            </div>
-            <div className="text-2xl font-bold text-emerald-600">${stats.revenue_this_week.toFixed(2)}</div>
+            <h3 className="font-semibold text-gray-900 mb-4">Daily Licenses Sold (30 days)</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={stats.daily_stats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  interval="preserveStartEnd"
+                />
+                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                <Tooltip
+                  labelFormatter={(value) => new Date(value as string).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  formatter={(value) => [value, 'Licenses']}
+                />
+                <Bar dataKey="licenses_sold" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}

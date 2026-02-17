@@ -35,6 +35,7 @@
     "react-dom": "^19.2.0",
     "react-qrcode-logo": "^4.0.0",
     "react-router-dom": "^7.13.0",
+    "recharts": "^3.7.0",
     "serve": "^14.2.5",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
