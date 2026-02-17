@@ -4,7 +4,7 @@ export interface User {
   name: string;
   picture: string;
   telegram_username?: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'superadmin';
   balance: number; // Balance in cents
   created_at: string;
 }

@@ -25,14 +25,19 @@ interface NavbarProps {
 
 export default function Navbar({ user, onLogout }: NavbarProps) {
   const location = useLocation();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const isSuperAdmin = user?.role === 'superadmin';
   const [showAPKModal, setShowAPKModal] = useState(false);
 
   const navItems = [
     { path: '/phones', label: 'Phones', icon: Smartphone },
     { path: '/billing', label: 'Billing', icon: Wallet },
-    ...(isAdmin ? [
+    // Servers - superadmin only
+    ...(isSuperAdmin ? [
       { path: '/admin/servers', label: 'Servers', icon: Server },
+    ] : []),
+    // Users - all admins
+    ...(isAdmin ? [
       { path: '/admin/users', label: 'Users', icon: Users },
     ] : []),
   ];
@@ -142,7 +147,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                       <span className="text-sm font-medium">{user.name}</span>
                       {isAdmin && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-0">
-                          Admin
+                          {isSuperAdmin ? 'Super Admin' : 'Admin'}
                         </Badge>
                       )}
                     </div>
@@ -153,7 +158,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium">{user.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {isAdmin ? 'Administrator' : 'User'}
+                        {isSuperAdmin ? 'Super Administrator' : isAdmin ? 'Administrator' : 'User'}
                       </p>
                     </div>
                   </DropdownMenuLabel>

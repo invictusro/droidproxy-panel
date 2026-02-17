@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2, Search, UserCheck, Users as UsersIcon, DollarSign, Smartphone, TrendingUp, CreditCard, Key, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { api } from '../../api/client';
+import { useAuth } from '../../hooks/useAuth';
 import type { User } from '../../types';
 
 interface UserWithStats extends User {
@@ -43,6 +44,8 @@ interface UserStats {
 export default function Users() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === 'superadmin';
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -166,34 +169,41 @@ export default function Users() {
                 Active Today
               </div>
               <div className="text-2xl font-bold text-gray-900">{stats.active_users_today}</div>
-              <div className="text-xs text-gray-500">{stats.users_with_balance} with balance</div>
+              {isSuperAdmin && stats.users_with_balance !== undefined && (
+                <div className="text-xs text-gray-500">{stats.users_with_balance} with balance</div>
+              )}
             </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                <DollarSign className="w-4 h-4" />
-                Spent Today
-              </div>
-              <div className="text-2xl font-bold text-gray-900">${stats.balance_spent_today.toFixed(2)}</div>
-              <div className="text-xs text-gray-500">Yesterday: ${stats.balance_spent_yesterday.toFixed(2)}</div>
-            </div>
+            {/* SuperAdmin-only stats */}
+            {isSuperAdmin && stats.balance_spent_today !== undefined && (
+              <>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                    <DollarSign className="w-4 h-4" />
+                    Spent Today
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">${stats.balance_spent_today.toFixed(2)}</div>
+                  <div className="text-xs text-gray-500">Yesterday: ${stats.balance_spent_yesterday?.toFixed(2) || '0.00'}</div>
+                </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                <DollarSign className="w-4 h-4" />
-                Total Balance
-              </div>
-              <div className="text-2xl font-bold text-emerald-600">${stats.total_balance.toFixed(2)}</div>
-            </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                    <DollarSign className="w-4 h-4" />
+                    Total Balance
+                  </div>
+                  <div className="text-2xl font-bold text-emerald-600">${stats.total_balance?.toFixed(2) || '0.00'}</div>
+                </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                <CreditCard className="w-4 h-4" />
-                Total Revenue
-              </div>
-              <div className="text-2xl font-bold text-emerald-600">${stats.total_revenue.toFixed(2)}</div>
-              <div className="text-xs text-gray-500">${stats.revenue_this_month.toFixed(2)} this month</div>
-            </div>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                    <CreditCard className="w-4 h-4" />
+                    Total Revenue
+                  </div>
+                  <div className="text-2xl font-bold text-emerald-600">${stats.total_revenue?.toFixed(2) || '0.00'}</div>
+                  <div className="text-xs text-gray-500">${stats.revenue_this_month?.toFixed(2) || '0.00'} this month</div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Row 2: Phones & Infrastructure */}
@@ -245,8 +255,8 @@ export default function Users() {
         </>
       )}
 
-      {/* Charts */}
-      {stats && stats.daily_stats && stats.daily_stats.length > 0 && (
+      {/* Charts - SuperAdmin only */}
+      {isSuperAdmin && stats && stats.daily_stats && stats.daily_stats.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Daily New Users Chart */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
@@ -316,8 +326,8 @@ export default function Users() {
         </div>
       )}
 
-      {/* Top Users */}
-      {stats && (
+      {/* Top Users - SuperAdmin only */}
+      {isSuperAdmin && stats && stats.top_users_by_balance && stats.top_users_by_phones && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
             <h3 className="font-semibold text-gray-900 mb-3">Top Users by Balance</h3>
@@ -406,18 +416,33 @@ export default function Users() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <select
-                    value={user.role}
-                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                    className={`text-xs px-2 py-1 rounded-full border-0 ${
-                      user.role === 'admin'
+                  {isSuperAdmin ? (
+                    <select
+                      value={user.role}
+                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                      className={`text-xs px-2 py-1 rounded-full border-0 ${
+                        user.role === 'superadmin'
+                          ? 'bg-purple-100 text-purple-800'
+                          : user.role === 'admin'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                      <option value="superadmin">Super Admin</option>
+                    </select>
+                  ) : (
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      user.role === 'superadmin'
+                        ? 'bg-purple-100 text-purple-800'
+                        : user.role === 'admin'
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                    }`}>
+                      {user.role === 'superadmin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'User'}
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {user.phone_count}
@@ -429,16 +454,25 @@ export default function Users() {
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleImpersonate(user)}
-                      className="text-emerald-600 hover:text-emerald-900 p-1 hover:bg-emerald-50 rounded"
-                      title="Impersonate user"
-                      disabled={user.role === 'admin'}
+                      className={`p-1 rounded ${
+                        user.role === 'admin' || user.role === 'superadmin'
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-emerald-600 hover:text-emerald-900 hover:bg-emerald-50'
+                      }`}
+                      title={user.role === 'admin' || user.role === 'superadmin' ? 'Cannot impersonate admins' : 'Impersonate user'}
+                      disabled={user.role === 'admin' || user.role === 'superadmin'}
                     >
                       <UserCheck className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(user.id)}
-                      className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
-                      title="Delete user"
+                      className={`p-1 rounded ${
+                        !isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin')
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-red-600 hover:text-red-900 hover:bg-red-50'
+                      }`}
+                      title={!isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin') ? 'Cannot delete admins' : 'Delete user'}
+                      disabled={!isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
