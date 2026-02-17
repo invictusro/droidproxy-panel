@@ -77,7 +77,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user?.role !== 'admin') {
+  // Allow both admin and superadmin roles
+  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
     return <Navigate to="/phones" replace />;
   }
 
