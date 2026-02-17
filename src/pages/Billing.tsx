@@ -119,16 +119,6 @@ export default function Billing() {
     }
   };
 
-  const handleCryptoDeposit = () => {
-    const amount = getAmount();
-    if (amount < 1000) {
-      alert('Minimum deposit is $10');
-      return;
-    }
-    // TODO: Implement crypto deposit flow
-    alert('Crypto deposits coming soon! Contact support for manual crypto payments.');
-  };
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short',
@@ -356,11 +346,8 @@ export default function Billing() {
             </div>
           </button>
 
-          {/* Crypto Payment - entire card is clickable */}
-          <button
-            onClick={handleCryptoDeposit}
-            className="w-full text-left border-2 border-zinc-200 rounded-xl hover:border-orange-500 transition-colors"
-          >
+          {/* Crypto / Manual Payment */}
+          <div className="w-full border-2 border-zinc-200 rounded-xl">
             <div className="flex items-center gap-3 p-4">
               <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
                 <Bitcoin className="w-5 h-5 text-orange-600" />
@@ -371,14 +358,23 @@ export default function Billing() {
               </div>
             </div>
 
-            {/* Crypto disclaimer */}
             <div className="px-4 pb-4">
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Crypto payments do not enable auto-renewal. You will need to manually top up your balance
-                before it runs out to avoid service interruption.
+              <a
+                href="https://t.me/invictusproxies"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#229ED9] hover:bg-[#1e8dc4] text-white font-medium rounded-xl transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                Manual Payment via Telegram
+              </a>
+              <p className="text-xs text-zinc-500 mt-3 leading-relaxed text-center">
+                Contact us on Telegram for manual crypto payments. Crypto payments do not enable auto-renewal.
               </p>
             </div>
-          </button>
+          </div>
         </div>
 
         {/* VAT notice */}

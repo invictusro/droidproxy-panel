@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown, Wallet } from 'lucide-react';
+import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown, Wallet, Headphones } from 'lucide-react';
 import APKDownloadModal from './APKDownloadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +78,22 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                 <Download className="w-4 h-4" />
                 Download APK
               </Button>
+
+              {/* Support Button */}
+              <a
+                href="https://t.me/invictusproxies"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground hover:text-foreground hover:bg-accent"
+                >
+                  <Headphones className="w-4 h-4" />
+                  Support
+                </Button>
+              </a>
 
               {/* API Dropdown */}
               <DropdownMenu>

@@ -10,7 +10,6 @@ import type {
   PlanChangePreview,
   PlanTier,
   MainSection,
-  TrafficSubTab,
   DeviceSubTab,
   RotationMode,
   DataUsage,
@@ -55,7 +54,6 @@ export default function PhoneSettingsModal({
   // Auto-select license tab if phone has no license
   const [hasLicense, setHasLicense] = useState(phone.has_active_license);
   const [activeSection, setActiveSection] = useState<MainSection>(hasLicense ? 'overview' : 'license');
-  const [trafficSubTab, setTrafficSubTab] = useState<TrafficSubTab>('monthly');
   const [deviceSubTab, setDeviceSubTab] = useState<DeviceSubTab>('metrics');
 
   const [credentials, setCredentials] = useState<ConnectionCredential[]>([]);
@@ -500,10 +498,8 @@ export default function PhoneSettingsModal({
                     uptimeData={uptimeData}
                     credentials={credentials}
                     loadingUsage={loadingUsage}
-                    trafficSubTab={trafficSubTab}
                     usageDateRange={usageDateRange}
                     selectedCredentialId={selectedCredentialId}
-                    onSubTabChange={setTrafficSubTab}
                     onDateRangeChange={setUsageDateRange}
                     onCredentialChange={setSelectedCredentialId}
                   />
