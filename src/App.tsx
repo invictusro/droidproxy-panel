@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -149,7 +149,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppRoutes />
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
