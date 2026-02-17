@@ -3,7 +3,7 @@ import { useRef } from 'react';
 interface CodeInputProps {
   value: string;
   onChange: (code: string) => void;
-  onSubmit: () => void;
+  onSubmit: (code: string) => void;
   disabled?: boolean;
   length?: number;
 }
@@ -39,7 +39,7 @@ export function CodeInput({
 
     // Auto-submit when all digits are entered
     if (newCode.length === length) {
-      setTimeout(onSubmit, 100);
+      setTimeout(() => onSubmit(newCode), 100);
     }
   };
 
@@ -56,7 +56,8 @@ export function CodeInput({
     } else if (e.key === 'ArrowRight' && index < length - 1) {
       focusInput(index + 1);
     } else if (e.key === 'Enter') {
-      onSubmit();
+      const currentCode = digits.filter(d => d && d.trim()).join('');
+      onSubmit(currentCode);
     }
   };
 
@@ -67,7 +68,7 @@ export function CodeInput({
       onChange(pastedData);
       focusInput(Math.min(pastedData.length, length - 1));
       if (pastedData.length === length) {
-        setTimeout(onSubmit, 100);
+        setTimeout(() => onSubmit(pastedData), 100);
       }
     }
   };

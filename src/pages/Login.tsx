@@ -83,13 +83,15 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
     }
   };
 
-  const handleVerifyEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyEmail = async (codeValue?: string) => {
     setIsLoading(true);
     setError('');
 
+    // Use provided code or fall back to state
+    const codeToVerify = codeValue || verificationCode;
+
     // Ensure code is exactly 6 digits
-    const cleanCode = verificationCode.replace(/\D/g, '').slice(0, 6);
+    const cleanCode = codeToVerify.replace(/\D/g, '').slice(0, 6);
     if (cleanCode.length !== 6) {
       setError('Please enter a valid 6-digit code');
       setIsLoading(false);
@@ -180,7 +182,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
               </div>
             )}
 
-            <form onSubmit={handleVerifyEmail} className="space-y-6">
+            <div className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-sm font-medium text-foreground text-center block">
                   Enter verification code
@@ -188,17 +190,13 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
                 <CodeInput
                   value={verificationCode}
                   onChange={setVerificationCode}
-                  onSubmit={() => {
-                    if (verificationCode.length === 6 && !isLoading) {
-                      handleVerifyEmail({ preventDefault: () => {} } as React.FormEvent);
-                    }
-                  }}
+                  onSubmit={handleVerifyEmail}
                   disabled={isLoading}
                 />
               </div>
 
               <Button
-                type="submit"
+                onClick={() => handleVerifyEmail()}
                 disabled={isLoading || verificationCode.length !== 6}
                 className="w-full bg-primary hover:bg-primary/90 text-white h-11 shadow-md hover:shadow-lg transition-all font-medium"
               >
@@ -211,7 +209,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
                   'Verify Email'
                 )}
               </Button>
-            </form>
+            </div>
 
             <div className="mt-6 text-center space-y-3">
               <div>

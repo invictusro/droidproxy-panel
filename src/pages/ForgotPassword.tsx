@@ -54,13 +54,15 @@ export default function ForgotPassword() {
     }
   };
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyCode = async (codeValue?: string) => {
     setIsLoading(true);
     setError('');
 
+    // Use provided code or fall back to state
+    const codeToVerify = codeValue || code;
+
     // Ensure code is exactly 6 digits
-    const cleanCode = code.replace(/\D/g, '').slice(0, 6);
+    const cleanCode = codeToVerify.replace(/\D/g, '').slice(0, 6);
     if (cleanCode.length !== 6) {
       setError('Please enter a valid 6-digit code');
       setIsLoading(false);
@@ -231,12 +233,12 @@ export default function ForgotPassword() {
                 <CodeInput
                   value={code}
                   onChange={setCode}
-                  onSubmit={() => handleVerifyCode({ preventDefault: () => {} } as React.FormEvent)}
+                  onSubmit={handleVerifyCode}
                   disabled={isLoading}
                 />
 
                 <Button
-                  onClick={() => handleVerifyCode({ preventDefault: () => {} } as React.FormEvent)}
+                  onClick={() => handleVerifyCode()}
                   disabled={isLoading || code.length !== 6}
                   className="w-full bg-primary hover:bg-primary/90 text-white h-11 shadow-md hover:shadow-lg transition-all font-medium"
                 >
