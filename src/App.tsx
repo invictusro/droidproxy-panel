@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import AuthCallback from './pages/AuthCallback';
 import Phones from './pages/Phones';
 import AddPhone from './pages/AddPhone';
@@ -102,6 +103,9 @@ function AppRoutes() {
         } />
         <Route path="/register" element={
           isAuthenticated ? <Navigate to="/phones" replace /> : <Login defaultTab="register" />
+        } />
+        <Route path="/forgot-password" element={
+          isAuthenticated ? <Navigate to="/phones" replace /> : <ForgotPassword />
         } />
         <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
         <Route path="/apk" element={<APKRedirect />} />

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Loader2, AtSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, User, Loader2, AtSign, KeyRound, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,14 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Verification state
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [attemptsRemaining, setAttemptsRemaining] = useState(3);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -26,15 +34,25 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
     telegram: '',
   });
 
+  // Countdown timer for resend cooldown
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
+    setSuccess('');
   };
 
   const handleSubmit = async (e: React.FormEvent, isLogin: boolean) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       if (isLogin) {
@@ -43,19 +61,187 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
         navigate('/phones');
       } else {
         const response = await api.register(formData.email, formData.password, formData.name, formData.telegram || undefined);
-        localStorage.setItem('token', response.data.token);
-        navigate('/phones');
+        // Registration now requires email verification
+        setVerificationEmail(response.data.email || formData.email);
+        setShowVerification(true);
+        setResendCooldown(60);
+        setSuccess(response.data.message || 'Verification email sent. Please check your inbox.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'An error occurred');
+      const errorCode = err.response?.data?.error;
+      // Handle email not verified error during login
+      if (errorCode === 'email_not_verified') {
+        setVerificationEmail(err.response?.data?.email || formData.email);
+        setShowVerification(true);
+        setError('Please verify your email to continue.');
+      } else {
+        setError(errorCode || 'An error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await api.verifyEmail(verificationEmail, verificationCode);
+      localStorage.setItem('token', response.data.token);
+      navigate('/phones');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Invalid verification code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await api.resendVerification(verificationEmail);
+      setSuccess('New verification code sent.');
+      setResendCooldown(60);
+      if (response.data.attempts_remaining !== undefined) {
+        setAttemptsRemaining(response.data.attempts_remaining);
+      }
+    } catch (err: any) {
+      if (err.response?.data?.retry_after_secs) {
+        setResendCooldown(err.response.data.retry_after_secs);
+      }
+      setError(err.response?.data?.error || 'Failed to resend code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setShowVerification(false);
+    setVerificationCode('');
+    setError('');
+    setSuccess('');
+  };
+
   const handleGoogleLogin = () => {
     window.location.href = `${API_BASE_URL}/auth/google`;
   };
+
+  // Verification form UI
+  if (showVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-zinc-50 via-white to-zinc-100">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-emerald-100/40 via-transparent to-transparent" />
+          <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-zinc-200/60 via-transparent to-transparent" />
+        </div>
+
+        <Card className="w-full max-w-md bg-white border border-zinc-200 shadow-2xl shadow-zinc-200/50 rounded-2xl relative">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-3xl font-bold">
+              <span className="text-primary">Droid</span>
+              <span className="text-zinc-900">Proxy</span>
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Verify Your Email
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="pt-4">
+            <div className="text-center mb-6">
+              <p className="text-sm text-muted-foreground">
+                We sent a 6-digit code to <span className="font-medium text-foreground">{verificationEmail}</span>
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyEmail} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="verification-code" className="text-sm font-medium text-foreground">Verification Code</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    id="verification-code"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                    maxLength={6}
+                    placeholder="Enter 6-digit code"
+                    className="pl-10 text-center tracking-[0.5em] font-mono text-lg bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading || verificationCode.length !== 6}
+                className="w-full bg-primary hover:bg-primary/90 text-white h-11 shadow-md hover:shadow-lg transition-all font-medium"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify Email'
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center space-y-3">
+              <div>
+                <Button
+                  variant="ghost"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0 || isLoading || attemptsRemaining <= 0}
+                  className="text-sm"
+                >
+                  {resendCooldown > 0 ? (
+                    `Resend code in ${resendCooldown}s`
+                  ) : attemptsRemaining <= 0 ? (
+                    'No attempts remaining'
+                  ) : (
+                    'Resend verification code'
+                  )}
+                </Button>
+                {attemptsRemaining < 3 && attemptsRemaining > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {attemptsRemaining} {attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining
+                  </p>
+                )}
+              </div>
+
+              <Button
+                variant="link"
+                onClick={handleBackToLogin}
+                className="text-sm text-muted-foreground"
+              >
+                <ArrowLeft className="mr-1 h-3 w-3" />
+                Back to login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-zinc-50 via-white to-zinc-100">
@@ -89,6 +275,12 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
               </div>
             )}
 
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
+
             <TabsContent value="login">
               <form onSubmit={(e) => handleSubmit(e, true)} className="space-y-4">
                 <div className="space-y-2">
@@ -109,7 +301,12 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="login-password" className="text-sm font-medium text-foreground">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password" className="text-sm font-medium text-foreground">Password</Label>
+                    <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                      Forgot password?
+                    </Link>
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input

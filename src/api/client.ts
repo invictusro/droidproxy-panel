@@ -42,6 +42,16 @@ export const api = {
     client.post('/auth/login', { email, password }),
   register: (email: string, password: string, name: string, telegramUsername?: string) =>
     client.post('/auth/register', { email, password, name, telegram_username: telegramUsername }),
+  verifyEmail: (email: string, code: string) =>
+    client.post('/auth/verify-email', { email, code }),
+  resendVerification: (email: string) =>
+    client.post('/auth/resend-verification', { email }),
+  forgotPassword: (email: string) =>
+    client.post('/auth/forgot-password', { email }),
+  verifyResetCode: (email: string, code: string) =>
+    client.post('/auth/verify-reset-code', { email, code }),
+  resetPassword: (token: string, newPassword: string) =>
+    client.post('/auth/reset-password', { token, new_password: newPassword }),
   getMe: () => client.get('/me'),
   logout: () => client.post('/auth/logout'),
   refreshToken: () => client.post('/auth/refresh'),
