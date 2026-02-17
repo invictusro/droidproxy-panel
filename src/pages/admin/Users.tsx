@@ -244,13 +244,15 @@ export default function Users() {
               </div>
             ))}
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                <TrendingUp className="w-4 h-4" />
-                Revenue (7d)
+            {isSuperAdmin && stats.revenue_this_week !== undefined && (
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <TrendingUp className="w-4 h-4" />
+                  Revenue (7d)
+                </div>
+                <div className="text-2xl font-bold text-emerald-600">${stats.revenue_this_week.toFixed(2)}</div>
               </div>
-              <div className="text-2xl font-bold text-emerald-600">${stats.revenue_this_week.toFixed(2)}</div>
-            </div>
+            )}
           </div>
         </>
       )}
