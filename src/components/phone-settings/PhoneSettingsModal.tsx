@@ -485,6 +485,8 @@ export default function PhoneSettingsModal({
                     changingPlan={changingPlan}
                     canUseTrial={user?.can_use_trial ?? false}
                     startingTrial={startingTrial}
+                    purchaseAutoExtend={purchaseAutoExtend}
+                    onPurchaseAutoExtendChange={setPurchaseAutoExtend}
                     onPurchaseLicense={handlePurchaseLicense}
                     onStartTrial={handleStartTrial}
                     onToggleAutoExtend={handleToggleAutoExtend}

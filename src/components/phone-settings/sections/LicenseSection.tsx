@@ -11,6 +11,8 @@ interface Props {
   changingPlan: boolean;
   canUseTrial: boolean;
   startingTrial: boolean;
+  purchaseAutoExtend: boolean;
+  onPurchaseAutoExtendChange: (value: boolean) => void;
   onPurchaseLicense: (planTier: string) => void;
   onStartTrial: () => void;
   onToggleAutoExtend: () => void;
@@ -31,6 +33,8 @@ export default function LicenseSection({
   changingPlan,
   canUseTrial,
   startingTrial,
+  purchaseAutoExtend,
+  onPurchaseAutoExtendChange,
   onPurchaseLicense,
   onStartTrial,
   onToggleAutoExtend,
@@ -325,6 +329,22 @@ export default function LicenseSection({
             <Trash2 className="w-4 h-4" />
             Delete Phone
           </button>
+        </div>
+
+        {/* Auto-extend toggle - shown before plan selection */}
+        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <p className="text-sm font-medium text-zinc-700">Auto-Extend License</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Automatically renew from balance when license expires</p>
+            </div>
+            <button
+              onClick={() => onPurchaseAutoExtendChange(!purchaseAutoExtend)}
+              className={`w-12 h-6 rounded-full transition-colors ${purchaseAutoExtend ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${purchaseAutoExtend ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </label>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
