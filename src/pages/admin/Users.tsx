@@ -464,18 +464,15 @@ export default function Users() {
                     >
                       <UserCheck className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className={`p-1 rounded ${
-                        !isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin')
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'text-red-600 hover:text-red-900 hover:bg-red-50'
-                      }`}
-                      title={!isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin') ? 'Cannot delete admins' : 'Delete user'}
-                      disabled={!isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="p-1 rounded text-red-600 hover:text-red-900 hover:bg-red-50"
+                        title="Delete user"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
