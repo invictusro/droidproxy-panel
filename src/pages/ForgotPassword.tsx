@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Loader2, KeyRound, ArrowLeft, Check } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowLeft, Check } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CodeInput } from '@/components/ui/code-input';
 
 type Step = 'email' | 'code' | 'password' | 'success';
 
@@ -218,26 +219,16 @@ export default function ForgotPassword() {
                 </div>
               )}
 
-              <form onSubmit={handleVerifyCode} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="code" className="text-sm font-medium text-foreground">Reset Code</Label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      id="code"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      required
-                      maxLength={6}
-                      placeholder="Enter 6-digit code"
-                      className="pl-10 text-center tracking-[0.5em] font-mono text-lg bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
-                    />
-                  </div>
-                </div>
+              <div className="space-y-4">
+                <CodeInput
+                  value={code}
+                  onChange={setCode}
+                  onSubmit={() => handleVerifyCode({ preventDefault: () => {} } as React.FormEvent)}
+                  disabled={isLoading}
+                />
 
                 <Button
-                  type="submit"
+                  onClick={() => handleVerifyCode({ preventDefault: () => {} } as React.FormEvent)}
                   disabled={isLoading || code.length !== 6}
                   className="w-full bg-primary hover:bg-primary/90 text-white h-11 shadow-md hover:shadow-lg transition-all font-medium"
                 >
@@ -250,7 +241,7 @@ export default function ForgotPassword() {
                     'Verify Code'
                   )}
                 </Button>
-              </form>
+              </div>
 
               <div className="mt-6 text-center space-y-3">
                 <Button

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, Loader2, AtSign, KeyRound, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Loader2, AtSign, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CodeInput } from '@/components/ui/code-input';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -171,22 +172,21 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
               </div>
             )}
 
-            <form onSubmit={handleVerifyEmail} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="verification-code" className="text-sm font-medium text-foreground">Verification Code</Label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    id="verification-code"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    required
-                    maxLength={6}
-                    placeholder="Enter 6-digit code"
-                    className="pl-10 text-center tracking-[0.5em] font-mono text-lg bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
-                  />
-                </div>
+            <form onSubmit={handleVerifyEmail} className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-foreground text-center block">
+                  Enter verification code
+                </Label>
+                <CodeInput
+                  value={verificationCode}
+                  onChange={setVerificationCode}
+                  onSubmit={() => {
+                    if (verificationCode.length === 6 && !isLoading) {
+                      handleVerifyEmail({ preventDefault: () => {} } as React.FormEvent);
+                    }
+                  }}
+                  disabled={isLoading}
+                />
               </div>
 
               <Button
