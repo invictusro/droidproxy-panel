@@ -76,8 +76,8 @@ export default function StatusBar({ user, centrifugoToken, centrifugoUrl }: Stat
         const charges: UpcomingCharge[] = [];
 
         phonesData.forEach((phone: any) => {
-          // Track all phones with active licenses (both auto and manual billing)
-          if (phone.has_active_license && phone.plan_tier) {
+          // Track all phones with active licenses (exclude free trials)
+          if (phone.has_active_license && phone.plan_tier && !phone.is_trial) {
             charges.push({
               phoneId: phone.id,
               phoneName: phone.name,
