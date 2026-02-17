@@ -169,6 +169,9 @@ export interface AuthState {
   centrifugoUrl: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  // Impersonation state
+  isImpersonating: boolean;
+  impersonatingUser: { name: string; email: string } | null;
 }
 
 export interface PhoneGroup {

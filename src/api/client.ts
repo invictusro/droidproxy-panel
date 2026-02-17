@@ -222,6 +222,8 @@ export const api = {
 
   // Users (admin)
   getUsers: () => client.get('/users'),
+  searchUsers: (query: string) => client.get(`/users/search?q=${encodeURIComponent(query)}`),
+  getUserStats: () => client.get('/users/stats'),
   updateUserRole: (id: string, role: string) =>
     client.put(`/users/${id}/role`, { role }),
   deleteUser: (id: string) => client.delete(`/users/${id}`),
@@ -230,6 +232,8 @@ export const api = {
     type: 'credit' | 'debit';
     description?: string;
   }) => client.post(`/admin/users/${userId}/balance`, data),
+  impersonateUser: (userId: string) => client.post(`/users/${userId}/impersonate`),
+  stopImpersonation: () => client.post('/auth/stop-impersonation'),
 
   // Fleet Management (admin) - OTA Updates
   uploadHubAgentBinary: (file: File, version: string) => {

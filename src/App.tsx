@@ -10,6 +10,7 @@ import Billing from './pages/Billing';
 import Servers from './pages/admin/Servers';
 import Users from './pages/admin/Users';
 import APIKeys from './pages/api/Keys';
+import ImpersonationBanner from './components/ImpersonationBanner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,7 +84,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, login, logout, isLoading, isAuthenticated, centrifugoToken, centrifugoUrl } = useAuth();
+  const { user, login, logout, isLoading, isAuthenticated, centrifugoToken, centrifugoUrl, isImpersonating, impersonatingUser } = useAuth();
 
   if (isLoading) {
     return (
@@ -94,42 +95,49 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={
-        isAuthenticated ? <Navigate to="/phones" replace /> : <Login defaultTab="login" />
-      } />
-      <Route path="/register" element={
-        isAuthenticated ? <Navigate to="/phones" replace /> : <Login defaultTab="register" />
-      } />
-      <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
-      <Route path="/apk" element={<APKRedirect />} />
-      {/* Public API docs - redirect to standalone page */}
-      <Route path="/docs" element={<DocsRedirect />} />
-
-      <Route element={
-        <ProtectedRoute>
-          <Layout user={user} onLogout={logout} centrifugoToken={centrifugoToken} centrifugoUrl={centrifugoUrl} />
-        </ProtectedRoute>
-      }>
-        <Route index element={<Navigate to="/phones" replace />} />
-        <Route path="phones" element={<Phones />} />
-        <Route path="phones/add" element={<AddPhone />} />
-        <Route path="billing" element={<Billing />} />
-
-        {/* API routes */}
-        <Route path="api/keys" element={<APIKeys />} />
-
-        {/* Admin routes */}
-        <Route path="admin/servers" element={
-          <AdminRoute><Servers /></AdminRoute>
+    <>
+      <Routes>
+        <Route path="/login" element={
+          isAuthenticated ? <Navigate to="/phones" replace /> : <Login defaultTab="login" />
         } />
-        <Route path="admin/users" element={
-          <AdminRoute><Users /></AdminRoute>
+        <Route path="/register" element={
+          isAuthenticated ? <Navigate to="/phones" replace /> : <Login defaultTab="register" />
         } />
-      </Route>
+        <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
+        <Route path="/apk" element={<APKRedirect />} />
+        {/* Public API docs - redirect to standalone page */}
+        <Route path="/docs" element={<DocsRedirect />} />
 
-      <Route path="*" element={<Navigate to="/phones" replace />} />
-    </Routes>
+        <Route element={
+          <ProtectedRoute>
+            <Layout user={user} onLogout={logout} centrifugoToken={centrifugoToken} centrifugoUrl={centrifugoUrl} />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="/phones" replace />} />
+          <Route path="phones" element={<Phones />} />
+          <Route path="phones/add" element={<AddPhone />} />
+          <Route path="billing" element={<Billing />} />
+
+          {/* API routes */}
+          <Route path="api/keys" element={<APIKeys />} />
+
+          {/* Admin routes */}
+          <Route path="admin/servers" element={
+            <AdminRoute><Servers /></AdminRoute>
+          } />
+          <Route path="admin/users" element={
+            <AdminRoute><Users /></AdminRoute>
+          } />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/phones" replace />} />
+      </Routes>
+
+      {/* Impersonation Banner - shown at bottom when admin is impersonating a user */}
+      {isImpersonating && (
+        <ImpersonationBanner impersonatingUser={impersonatingUser} />
+      )}
+    </>
   );
 }
 

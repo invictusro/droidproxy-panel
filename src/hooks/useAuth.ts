@@ -10,6 +10,8 @@ export function useAuth() {
     centrifugoUrl: null,
     isLoading: true,
     isAuthenticated: false,
+    isImpersonating: localStorage.getItem('isImpersonating') === 'true',
+    impersonatingUser: JSON.parse(localStorage.getItem('impersonatingUser') || 'null'),
   });
 
   const fetchUser = useCallback(async () => {
@@ -21,6 +23,8 @@ export function useAuth() {
 
     try {
       const response = await api.getMe();
+      const isImpersonating = localStorage.getItem('isImpersonating') === 'true';
+      const impersonatingUser = JSON.parse(localStorage.getItem('impersonatingUser') || 'null');
       setState({
         user: response.data.user as User,
         token,
@@ -28,9 +32,14 @@ export function useAuth() {
         centrifugoUrl: response.data.centrifugo_url || null,
         isLoading: false,
         isAuthenticated: true,
+        isImpersonating,
+        impersonatingUser,
       });
     } catch (error) {
       localStorage.removeItem('token');
+      localStorage.removeItem('isImpersonating');
+      localStorage.removeItem('impersonatingUser');
+      localStorage.removeItem('originalToken');
       setState({
         user: null,
         token: null,
@@ -38,6 +47,8 @@ export function useAuth() {
         centrifugoUrl: null,
         isLoading: false,
         isAuthenticated: false,
+        isImpersonating: false,
+        impersonatingUser: null,
       });
     }
   }, []);
@@ -59,6 +70,9 @@ export function useAuth() {
       // Ignore errors
     }
     localStorage.removeItem('token');
+    localStorage.removeItem('isImpersonating');
+    localStorage.removeItem('impersonatingUser');
+    localStorage.removeItem('originalToken');
     setState({
       user: null,
       token: null,
@@ -66,6 +80,8 @@ export function useAuth() {
       centrifugoUrl: null,
       isLoading: false,
       isAuthenticated: false,
+      isImpersonating: false,
+      impersonatingUser: null,
     });
   }, []);
 
