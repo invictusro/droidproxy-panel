@@ -369,7 +369,7 @@ export default function PhoneSettingsModal({
   const menuItems: { id: MainSection; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <Info className="w-4 h-4" /> },
     { id: 'license', label: 'License', icon: <CreditCard className="w-4 h-4" /> },
-    { id: 'credentials', label: 'Credentials', icon: <Settings className="w-4 h-4" /> },
+    { id: 'credentials', label: 'Connection details', icon: <Settings className="w-4 h-4" /> },
     { id: 'rotation', label: 'Rotation', icon: <RotateCw className="w-4 h-4" /> },
     { id: 'traffic', label: 'Traffic', icon: <Database className="w-4 h-4" /> },
     { id: 'uptime', label: 'Uptime', icon: <Activity className="w-4 h-4" /> },
