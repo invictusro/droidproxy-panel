@@ -125,6 +125,7 @@ export const api = {
     plan_tier: 'lite' | 'turbo' | 'nitro';
     auto_extend?: boolean;
   }) => client.post(`/phones/${phoneId}/license`, data),
+  startTrial: (phoneId: string) => client.post(`/phones/${phoneId}/license/trial`),
   updateLicense: (phoneId: string, data: { auto_extend?: boolean }) =>
     client.put(`/phones/${phoneId}/license`, data),
   cancelLicense: (phoneId: string) =>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Info, CreditCard, Settings, RotateCw, Database, Activity, Shield, Smartphone, Power, AlertTriangle } from 'lucide-react';
 import { api } from '../../api/client';
+import { useAuth } from '../../hooks/useAuth';
 import type {
   PhoneWithStatus,
   ConnectionCredential,
@@ -51,6 +52,8 @@ export default function PhoneSettingsModal({
   isRotating,
   isRestarting
 }: Props) {
+  const { user } = useAuth();
+
   // Auto-select license tab if phone has no license
   const [hasLicense, setHasLicense] = useState(phone.has_active_license);
   const [activeSection, setActiveSection] = useState<MainSection>(hasLicense ? 'overview' : 'license');
@@ -65,6 +68,7 @@ export default function PhoneSettingsModal({
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingLicense, setLoadingLicense] = useState(false);
   const [purchasingLicense, setPurchasingLicense] = useState(false);
+  const [startingTrial, setStartingTrial] = useState(false);
   const [planChangePreview, setPlanChangePreview] = useState<PlanChangePreview | null>(null);
   const [loadingPlanChange, setLoadingPlanChange] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
@@ -272,6 +276,25 @@ export default function PhoneSettingsModal({
     setChangingPlan(false);
   };
 
+  const handleStartTrial = async () => {
+    setStartingTrial(true);
+    try {
+      await api.startTrial(phone.id);
+      await loadLicenseData();
+      setHasLicense(true);
+      onRefetch?.();
+    } catch (error: any) {
+      const msg = error.response?.data?.error || 'Failed to start trial';
+      setConfirmModal({
+        show: true,
+        title: 'Trial Failed',
+        message: msg,
+        isError: true,
+      });
+    }
+    setStartingTrial(false);
+  };
+
   // Rotation handlers
   const handleSaveRotationSettings = async (mode: RotationMode, interval?: number) => {
     setSavingRotation(true);
@@ -460,7 +483,10 @@ export default function PhoneSettingsModal({
                     planChangePreview={planChangePreview}
                     loadingPlanChange={loadingPlanChange}
                     changingPlan={changingPlan}
+                    canUseTrial={user?.can_use_trial ?? false}
+                    startingTrial={startingTrial}
                     onPurchaseLicense={handlePurchaseLicense}
+                    onStartTrial={handleStartTrial}
                     onToggleAutoExtend={handleToggleAutoExtend}
                     onCancelLicense={handleCancelLicense}
                     onPreviewPlanChange={handlePreviewPlanChange}

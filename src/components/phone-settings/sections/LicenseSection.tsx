@@ -1,4 +1,4 @@
-import { Zap, Activity, Database, RotateCw, Shield, Cpu, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { Zap, Activity, Database, RotateCw, Shield, Cpu, ArrowUp, ArrowDown, Trash2, Gift } from 'lucide-react';
 import type { PhoneLicense, Plan, PlanChangePreview, PlanTier } from '../types';
 
 interface Props {
@@ -9,7 +9,10 @@ interface Props {
   planChangePreview: PlanChangePreview | null;
   loadingPlanChange: boolean;
   changingPlan: boolean;
+  canUseTrial: boolean;
+  startingTrial: boolean;
   onPurchaseLicense: (planTier: string) => void;
+  onStartTrial: () => void;
   onToggleAutoExtend: () => void;
   onCancelLicense: () => void;
   onPreviewPlanChange: (newTier: PlanTier) => void;
@@ -26,7 +29,10 @@ export default function LicenseSection({
   planChangePreview,
   loadingPlanChange,
   changingPlan,
+  canUseTrial,
+  startingTrial,
   onPurchaseLicense,
+  onStartTrial,
   onToggleAutoExtend,
   onCancelLicense,
   onPreviewPlanChange,
@@ -323,17 +329,27 @@ export default function LicenseSection({
 
         <div className="grid grid-cols-3 gap-4">
           {plans.map((plan) => {
-            const isPopular = plan.tier === 'nitro';
+            const isNitro = plan.tier === 'nitro';
+            const showTrialBadge = isNitro && canUseTrial;
             return (
               <div
                 key={plan.tier}
                 className={`relative p-4 bg-white rounded-xl border-2 transition-colors ${
-                  isPopular
+                  showTrialBadge
+                    ? 'border-amber-400 ring-2 ring-amber-100'
+                    : isNitro
                     ? 'border-emerald-400 ring-2 ring-emerald-100'
                     : 'border-zinc-200 hover:border-emerald-400'
                 }`}
               >
-                {isPopular && (
+                {showTrialBadge ? (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1">
+                      <Gift className="w-3 h-3" />
+                      48h FREE TRIAL
+                    </span>
+                  </div>
+                ) : isNitro && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-emerald-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
                       Popular
@@ -342,7 +358,14 @@ export default function LicenseSection({
                 )}
                 <h4 className="text-lg font-bold text-zinc-900 mb-1">{plan.name}</h4>
                 <p className="text-xs text-zinc-500 mb-2">{planDescriptions[plan.tier]}</p>
-                <p className="text-2xl font-bold text-emerald-600 mb-4">{plan.price_formatted}</p>
+                {showTrialBadge ? (
+                  <div className="mb-4">
+                    <p className="text-2xl font-bold text-amber-600">FREE</p>
+                    <p className="text-xs text-zinc-500">then {plan.price_formatted}</p>
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-emerald-600 mb-4">{plan.price_formatted}</p>
+                )}
 
                 <div className="space-y-2 text-sm mb-4">
                   <div className="flex items-center gap-2">
@@ -385,17 +408,30 @@ export default function LicenseSection({
                   )}
                 </div>
 
-                <button
-                  onClick={() => onPurchaseLicense(plan.tier)}
-                  disabled={purchasingLicense}
-                  className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
-                    isPopular
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                  }`}
-                >
-                  {purchasingLicense ? 'Processing...' : 'Select Plan'}
-                </button>
+                {showTrialBadge ? (
+                  <div className="space-y-2">
+                    <button
+                      onClick={onStartTrial}
+                      disabled={startingTrial || purchasingLicense}
+                      className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                    >
+                      {startingTrial ? 'Starting Trial...' : 'Start Free Trial'}
+                    </button>
+                    <p className="text-xs text-center text-zinc-500">No credit card required</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onPurchaseLicense(plan.tier)}
+                    disabled={purchasingLicense || startingTrial}
+                    className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+                      isNitro
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                    }`}
+                  >
+                    {purchasingLicense ? 'Processing...' : 'Select Plan'}
+                  </button>
+                )}
               </div>
             );
           })}

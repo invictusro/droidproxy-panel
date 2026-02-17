@@ -7,6 +7,9 @@ export interface User {
   role: 'user' | 'admin' | 'superadmin';
   balance: number; // Balance in cents
   created_at: string;
+  // Trial
+  trial_used: boolean;
+  can_use_trial: boolean;
 }
 
 export interface Server {

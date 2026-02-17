@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Plus, RefreshCw, Settings, Wifi, WifiOff, Copy, Check, Smartphone,
   Filter, X, CheckSquare, Square, FolderPlus, ChevronDown, Trash2, RotateCw,
-  MoreHorizontal, Folder, Pencil
+  MoreHorizontal, Folder, Pencil, Gift, Sparkles
 } from 'lucide-react';
 import { usePhones, useDeletePhone, useRotateIP, useRestartProxy } from '../hooks/usePhones';
 import { useCentrifugo } from '../hooks/useCentrifugo';
@@ -58,7 +58,7 @@ const CountryFlag = ({ countryCode, className }: { countryCode: string; classNam
 
 export default function Phones() {
   const { data: phones, isLoading, refetch } = usePhones();
-  const { centrifugoToken, centrifugoUrl } = useAuth();
+  const { user, centrifugoToken, centrifugoUrl } = useAuth();
   const deletePhone = useDeletePhone();
   const rotateIP = useRotateIP();
   const restartProxy = useRestartProxy();
@@ -508,6 +508,36 @@ export default function Phones() {
           </Link>
         </div>
       </div>
+
+      {/* Trial Banner */}
+      {user?.can_use_trial && (
+        <Card className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-amber-200 shadow-md overflow-hidden">
+          <CardContent className="py-4 px-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                  <Gift className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-amber-900">Free 48-Hour Nitro Trial Available!</h3>
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <p className="text-sm text-amber-700">
+                    Add a phone and get full access to our fastest plan - completely free for 48 hours.
+                  </p>
+                </div>
+              </div>
+              <Link to="/phones/add">
+                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md hover:shadow-lg transition-all gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Phone & Start Trial
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Selection Actions Bar */}
       {isSelectionMode && selectedIds.size > 0 && (
