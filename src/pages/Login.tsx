@@ -88,8 +88,16 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
     setIsLoading(true);
     setError('');
 
+    // Ensure code is exactly 6 digits
+    const cleanCode = verificationCode.replace(/\D/g, '').slice(0, 6);
+    if (cleanCode.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await api.verifyEmail(verificationEmail, verificationCode);
+      const response = await api.verifyEmail(verificationEmail, cleanCode);
       localStorage.setItem('token', response.data.token);
       navigate('/phones');
     } catch (err: any) {

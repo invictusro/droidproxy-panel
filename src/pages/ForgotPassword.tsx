@@ -59,8 +59,16 @@ export default function ForgotPassword() {
     setIsLoading(true);
     setError('');
 
+    // Ensure code is exactly 6 digits
+    const cleanCode = code.replace(/\D/g, '').slice(0, 6);
+    if (cleanCode.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await api.verifyResetCode(email, code);
+      const response = await api.verifyResetCode(email, cleanCode);
       setResetToken(response.data.reset_token);
       setStep('password');
     } catch (err: any) {

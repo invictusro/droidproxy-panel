@@ -29,7 +29,8 @@ export function CodeInput({
 
     const newDigits = [...digits];
     newDigits[index] = char.slice(-1);
-    const newCode = newDigits.join('');
+    // Filter out empty strings to get clean code
+    const newCode = newDigits.filter(d => d && d.trim()).join('');
     onChange(newCode);
 
     if (char && index < length - 1) {
@@ -37,7 +38,7 @@ export function CodeInput({
     }
 
     // Auto-submit when all digits are entered
-    if (newCode.replace(/ /g, '').length === length) {
+    if (newCode.length === length) {
       setTimeout(onSubmit, 100);
     }
   };
@@ -49,7 +50,7 @@ export function CodeInput({
       }
       const newDigits = [...digits];
       newDigits[index] = '';
-      onChange(newDigits.join(''));
+      onChange(newDigits.filter(d => d && d.trim()).join(''));
     } else if (e.key === 'ArrowLeft' && index > 0) {
       focusInput(index - 1);
     } else if (e.key === 'ArrowRight' && index < length - 1) {
