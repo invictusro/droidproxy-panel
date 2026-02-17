@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, Loader2, AtSign, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,7 @@ interface LoginProps {
 
 export default function Login({ defaultTab = 'login' }: LoginProps) {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -58,7 +60,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
     try {
       if (isLogin) {
         const response = await api.login(formData.email, formData.password);
-        localStorage.setItem('token', response.data.token);
+        login(response.data.token);
         navigate('/phones');
       } else {
         const response = await api.register(formData.email, formData.password, formData.name, formData.telegram || undefined);
@@ -100,7 +102,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
 
     try {
       const response = await api.verifyEmail(verificationEmail, cleanCode);
-      localStorage.setItem('token', response.data.token);
+      login(response.data.token);
       navigate('/phones');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Invalid verification code');
