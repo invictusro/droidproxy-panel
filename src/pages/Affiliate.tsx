@@ -122,7 +122,7 @@ export default function Affiliate() {
     withdrawn_amount: 0,
   };
 
-  const affiliateSlug = statsData?.affiliate_slug || '';
+  const affiliateSlug = statsData?.affiliate_slug || statsData?.referral_code || '';
   const commissionRate = statsData?.commission_rate || 10;
 
   const referrals: Referral[] = referralsData?.referrals || [];
