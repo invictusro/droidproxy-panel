@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, User, Loader2, AtSign, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Loader2, AtSign, ArrowLeft, Gift } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
     password: '',
     name: '',
     telegram: '',
+    referral: '',
   });
 
   // Handle referral code from URL query param, localStorage, or cookie
@@ -95,12 +96,13 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
         login(response.data.token);
         navigate('/phones');
       } else {
+        const finalReferralCode = referralCode || formData.referral;
         const response = await api.register(
           formData.email,
           formData.password,
           formData.name,
           formData.telegram || undefined,
-          referralCode || undefined
+          finalReferralCode || undefined
         );
         // Registration now requires email verification
         setVerificationEmail(response.data.email || formData.email);
@@ -458,6 +460,26 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
                     />
                   </div>
                 </div>
+
+                {!referralCode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="register-referral" className="text-sm font-medium text-foreground">
+                      Referral Code <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
+                    <div className="relative">
+                      <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        id="register-referral"
+                        name="referral"
+                        value={formData.referral}
+                        onChange={handleChange}
+                        placeholder="Enter referral code"
+                        className="pl-10 bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   type="submit"

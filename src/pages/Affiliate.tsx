@@ -122,7 +122,6 @@ export default function Affiliate() {
     withdrawn_amount: 0,
   };
 
-  const referralCode = statsData?.referral_code || '';
   const affiliateSlug = statsData?.affiliate_slug || '';
   const commissionRate = statsData?.commission_rate || 10;
 
@@ -241,36 +240,62 @@ export default function Affiliate() {
         </div>
       )}
 
-      {/* Referral Link */}
+      {/* Referral Link & Code */}
       <div className="bg-white rounded-2xl p-6 border border-zinc-200">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-2">
           <Link2 className="w-5 h-5 text-zinc-400" />
-          <h3 className="font-semibold text-zinc-900">Your Invite Link</h3>
+          <h3 className="font-semibold text-zinc-900">Share & Earn</h3>
         </div>
+        <p className="text-sm text-zinc-500 mb-4">
+          Share your link or give your code to friends. They can enter it at signup if they don't use your link.
+        </p>
 
         {affiliateSlug ? (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 font-mono text-sm text-emerald-700">
-              droidproxy.com/i/{affiliateSlug}
+          <div className="space-y-4">
+            {/* Invite Link */}
+            <div>
+              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2 block">Invite Link</label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 font-mono text-sm text-emerald-700">
+                  droidproxy.com/i/{affiliateSlug}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(`https://droidproxy.com/i/${affiliateSlug}`)}
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                </Button>
+                <button
+                  onClick={() => { setNewSlug(affiliateSlug); setIsEditingSlug(true); }}
+                  className="text-zinc-400 hover:text-zinc-600"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(`https://droidproxy.com/i/${affiliateSlug}`)}
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            </Button>
-            <button
-              onClick={() => { setNewSlug(affiliateSlug); setIsEditingSlug(true); }}
-              className="text-zinc-400 hover:text-zinc-600"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
+
+            {/* Referral Code */}
+            <div>
+              <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2 block">Referral Code</label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-zinc-100 rounded-xl px-4 py-3 font-mono text-sm text-zinc-700">
+                  {affiliateSlug}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(affiliateSlug)}
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
           </div>
         ) : isEditingSlug ? (
           <div className="space-y-3">
+            <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide block">Choose your code</label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-500">droidproxy.com/i/</span>
               <input
                 type="text"
                 value={newSlug}
@@ -296,27 +321,19 @@ export default function Affiliate() {
               </Button>
             </div>
             {slugError && <p className="text-sm text-red-600">{slugError}</p>}
-            <p className="text-xs text-zinc-500">3-30 characters. Letters, numbers, hyphens, underscores.</p>
+            <p className="text-xs text-zinc-500">This will be your invite link and referral code. 3-30 characters, letters, numbers, hyphens, underscores.</p>
           </div>
         ) : (
-          <div className="flex items-center justify-between bg-zinc-50 border border-dashed border-zinc-300 rounded-xl px-4 py-3">
-            <div className="text-sm text-zinc-500">
-              <span className="text-zinc-400">droidproxy.com/i/</span>
-              <span className="text-emerald-600 font-medium">yourname</span>
+          <div className="flex items-center justify-between bg-zinc-50 border border-dashed border-zinc-300 rounded-xl px-4 py-4">
+            <div>
+              <p className="text-sm font-medium text-zinc-700">Create your unique code</p>
+              <p className="text-xs text-zinc-500">Used for both your invite link and referral code</p>
             </div>
             <Button size="sm" onClick={() => setIsEditingSlug(true)} className="bg-emerald-600 hover:bg-emerald-700">
-              Create Link
+              Create Code
             </Button>
           </div>
         )}
-
-        <div className="mt-4 pt-4 border-t border-zinc-100 flex items-center gap-3">
-          <span className="text-sm text-zinc-500">Referral code:</span>
-          <code className="bg-zinc-100 px-2 py-1 rounded text-sm font-mono">{referralCode}</code>
-          <button onClick={() => copyToClipboard(referralCode)} className="text-zinc-400 hover:text-zinc-600">
-            <Copy className="w-3.5 h-3.5" />
-          </button>
-        </div>
       </div>
 
       {/* Recent Activity */}
