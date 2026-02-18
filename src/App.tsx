@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
@@ -8,6 +9,7 @@ import AuthCallback from './pages/AuthCallback';
 import Phones from './pages/Phones';
 import AddPhone from './pages/AddPhone';
 import Billing from './pages/Billing';
+import Affiliate from './pages/Affiliate';
 import Servers from './pages/admin/Servers';
 import Users from './pages/admin/Users';
 import APIKeys from './pages/api/Keys';
@@ -38,6 +40,28 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+// Referral redirect - stores code and redirects to register
+function ReferralRedirect() {
+  const { code } = useParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (code) {
+      localStorage.setItem('referral_code', code);
+    }
+    navigate('/register', { replace: true });
+  }, [code, navigate]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Redirecting...</p>
+      </div>
+    </div>
+  );
 }
 
 // APK Download redirect - redirects to GitHub releases
@@ -109,6 +133,7 @@ function AppRoutes() {
           isAuthenticated ? <Navigate to="/phones" replace /> : <ForgotPassword />
         } />
         <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
+        <Route path="/r/:code" element={<ReferralRedirect />} />
         <Route path="/apk" element={<APKRedirect />} />
         {/* Public API docs - redirect to standalone page */}
         <Route path="/docs" element={<DocsRedirect />} />
@@ -122,6 +147,7 @@ function AppRoutes() {
           <Route path="phones" element={<Phones />} />
           <Route path="phones/add" element={<AddPhone />} />
           <Route path="billing" element={<Billing />} />
+          <Route path="affiliate" element={<Affiliate />} />
 
           {/* API routes */}
           <Route path="api/keys" element={<APIKeys />} />

@@ -40,8 +40,8 @@ export const api = {
   // Auth
   login: (email: string, password: string) =>
     client.post('/auth/login', { email, password }),
-  register: (email: string, password: string, name: string, telegramUsername?: string) =>
-    client.post('/auth/register', { email, password, name, telegram_username: telegramUsername }),
+  register: (email: string, password: string, name: string, telegramUsername?: string, referralCode?: string) =>
+    client.post('/auth/register', { email, password, name, telegram_username: telegramUsername, referral_code: referralCode }),
   verifyEmail: (email: string, code: string) =>
     client.post('/auth/verify-email', { email, code }),
   resendVerification: (email: string) =>
@@ -315,6 +315,14 @@ export const api = {
     is_active?: boolean;
   }) => client.put(`/api-keys/${id}`, data),
   deleteAPIKey: (id: string) => client.delete(`/api-keys/${id}`),
+
+  // Affiliate
+  getAffiliateStats: () => client.get('/affiliate/stats'),
+  getAffiliateReferrals: () => client.get('/affiliate/referrals'),
+  getAffiliateEarnings: () => client.get('/affiliate/earnings'),
+  withdrawAffiliate: (amount: number) => client.post('/affiliate/withdraw', { amount }),
+  setAffiliateSlug: (slug: string) => client.put('/affiliate/slug', { slug }),
+  validateReferralCode: (code: string) => client.get(`/affiliate/validate/${code}`),
 
   // Access Logs (admin - all phones)
   getAllAccessLogs: (params?: {

@@ -11,7 +11,6 @@ interface TopUpModalProps {
 }
 
 const TOPUP_AMOUNTS = [
-  { value: 500, label: '$5' },
   { value: 1000, label: '$10' },
   { value: 2000, label: '$20' },
   { value: 5000, label: '$50' },
@@ -28,15 +27,15 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
 
   const handleAmountContinue = () => {
     const amount = selectedAmount || (customAmount ? Math.round(parseFloat(customAmount) * 100) : 0);
-    if (amount < 500) {
-      return; // Min $5
+    if (amount < 1000) {
+      return; // Min $10
     }
     setStep('method');
   };
 
   const handleStripePayment = async () => {
     const amount = selectedAmount || (customAmount ? Math.round(parseFloat(customAmount) * 100) : 0);
-    if (amount < 500) return;
+    if (amount < 1000) return;
 
     setIsLoading(true);
     try {
@@ -54,7 +53,7 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
   };
 
   const getAmount = () => selectedAmount || (customAmount ? Math.round(parseFloat(customAmount) * 100) : 0);
-  const isValidAmount = getAmount() >= 500;
+  const isValidAmount = getAmount() >= 1000;
 
   const handleBack = () => {
     setStep('amount');
@@ -123,9 +122,9 @@ export default function TopUpModal({ isOpen, onClose, currentBalance, onSuccess:
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <input
                     type="number"
-                    min="5"
+                    min="10"
                     step="0.01"
-                    placeholder="Min $5.00"
+                    placeholder="Min $10.00"
                     value={customAmount}
                     onChange={(e) => {
                       setCustomAmount(e.target.value);

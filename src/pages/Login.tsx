@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, Loader2, AtSign, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,7 @@ interface LoginProps {
 
 export default function Login({ defaultTab = 'login' }: LoginProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,12 +31,43 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
   const [attemptsRemaining, setAttemptsRemaining] = useState(3);
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  // Referral code from URL or localStorage
+  const [referralCode, setReferralCode] = useState('');
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: '',
     telegram: '',
   });
+
+  // Handle referral code from URL query param, localStorage, or cookie
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) {
+      // Store in localStorage for persistence across page loads
+      localStorage.setItem('referral_code', ref);
+      setReferralCode(ref);
+    } else {
+      // Try to get from localStorage
+      const storedRef = localStorage.getItem('referral_code');
+      if (storedRef) {
+        setReferralCode(storedRef);
+      } else {
+        // Try to get from cookie (set by landing page)
+        const cookies = document.cookie.split(';');
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'referral_code' && value) {
+            setReferralCode(value);
+            // Also store in localStorage for consistency
+            localStorage.setItem('referral_code', value);
+            break;
+          }
+        }
+      }
+    }
+  }, [searchParams]);
 
   // Countdown timer for resend cooldown
   useEffect(() => {
@@ -63,12 +95,20 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
         login(response.data.token);
         navigate('/phones');
       } else {
-        const response = await api.register(formData.email, formData.password, formData.name, formData.telegram || undefined);
+        const response = await api.register(
+          formData.email,
+          formData.password,
+          formData.name,
+          formData.telegram || undefined,
+          referralCode || undefined
+        );
         // Registration now requires email verification
         setVerificationEmail(response.data.email || formData.email);
         setShowVerification(true);
         setResendCooldown(60);
         setSuccess(response.data.message || 'Verification email sent. Please check your inbox.');
+        // Clear referral code after successful registration
+        localStorage.removeItem('referral_code');
       }
     } catch (err: any) {
       const errorCode = err.response?.data?.error;

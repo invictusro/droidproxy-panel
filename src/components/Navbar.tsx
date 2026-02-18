@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown, Wallet, Headphones } from 'lucide-react';
+import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown, Wallet, Headphones, Gift } from 'lucide-react';
 import APKDownloadModal from './APKDownloadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
   const navItems = [
     { path: '/phones', label: 'Phones', icon: Smartphone },
     { path: '/billing', label: 'Billing', icon: Wallet },
+    { path: '/affiliate', label: 'Affiliate', icon: Gift },
     // Servers - superadmin only
     ...(isSuperAdmin ? [
       { path: '/admin/servers', label: 'Servers', icon: Server },
