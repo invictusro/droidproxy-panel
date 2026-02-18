@@ -50,6 +50,7 @@ export default function Affiliate() {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [cryptoAddress, setCryptoAddress] = useState('');
+  const [telegram, setTelegram] = useState('');
   const [isEditingSlug, setIsEditingSlug] = useState(false);
   const [newSlug, setNewSlug] = useState('');
   const [slugError, setSlugError] = useState('');
@@ -89,12 +90,14 @@ export default function Affiliate() {
   });
 
   const withdrawToCryptoMutation = useMutation({
-    mutationFn: (data: { amount: number; address: string }) => api.withdrawAffiliateCrypto(data.amount, data.address),
+    mutationFn: (data: { amount: number; address: string; telegram: string }) =>
+      api.withdrawAffiliateCrypto(data.amount, data.address, data.telegram),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['affiliate-stats'] });
       setShowCryptoModal(false);
       setWithdrawAmount('');
       setCryptoAddress('');
+      setTelegram('');
     },
   });
 
@@ -142,8 +145,8 @@ export default function Affiliate() {
 
   const handleWithdrawToCrypto = () => {
     const amount = Math.round(parseFloat(withdrawAmount) * 100);
-    if (amount >= 2500 && amount <= stats.available_balance && cryptoAddress.trim()) {
-      withdrawToCryptoMutation.mutate({ amount, address: cryptoAddress.trim() });
+    if (amount >= 2500 && amount <= stats.available_balance && cryptoAddress.trim() && telegram.trim()) {
+      withdrawToCryptoMutation.mutate({ amount, address: cryptoAddress.trim(), telegram: telegram.trim() });
     }
   };
 
@@ -462,15 +465,27 @@ export default function Affiliate() {
                 />
                 <p className="text-xs text-zinc-500 mt-1">We'll send USDT/USDC to this address</p>
               </div>
+
+              <div>
+                <label className="text-sm text-zinc-700 mb-1 block">Telegram Handle</label>
+                <input
+                  type="text"
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value)}
+                  placeholder="@username"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                />
+                <p className="text-xs text-zinc-500 mt-1">For confirmation before sending</p>
+              </div>
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => { setShowCryptoModal(false); setWithdrawAmount(''); setCryptoAddress(''); }} className="flex-1">
+              <Button variant="outline" onClick={() => { setShowCryptoModal(false); setWithdrawAmount(''); setCryptoAddress(''); setTelegram(''); }} className="flex-1">
                 Cancel
               </Button>
               <Button
                 onClick={handleWithdrawToCrypto}
-                disabled={withdrawToCryptoMutation.isPending || !withdrawAmount || parseFloat(withdrawAmount) < 25 || parseFloat(withdrawAmount) * 100 > stats.available_balance || !cryptoAddress.trim()}
+                disabled={withdrawToCryptoMutation.isPending || !withdrawAmount || parseFloat(withdrawAmount) < 25 || parseFloat(withdrawAmount) * 100 > stats.available_balance || !cryptoAddress.trim() || !telegram.trim()}
                 className="flex-1 bg-orange-600 hover:bg-orange-700"
               >
                 {withdrawToCryptoMutation.isPending ? 'Processing...' : 'Request Withdrawal'}

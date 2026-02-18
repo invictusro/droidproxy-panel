@@ -12,6 +12,7 @@ import Billing from './pages/Billing';
 import Affiliate from './pages/Affiliate';
 import Servers from './pages/admin/Servers';
 import Users from './pages/admin/Users';
+import Payouts from './pages/admin/Payouts';
 import APIKeys from './pages/api/Keys';
 import ImpersonationBanner from './components/ImpersonationBanner';
 
@@ -164,6 +165,9 @@ function AppRoutes() {
           } />
           <Route path="admin/users" element={
             <AdminRoute><Users /></AdminRoute>
+          } />
+          <Route path="admin/payouts" element={
+            <AdminRoute><Payouts /></AdminRoute>
           } />
         </Route>
 
