@@ -6,7 +6,7 @@ import {
   Link2,
   Copy,
   Check,
-  ArrowDownToLine,
+  ArrowDownRight,
   TrendingUp,
   Gift,
   Edit2
@@ -126,360 +126,210 @@ export default function Affiliate() {
   };
 
   const handleSaveSlug = () => {
-    if (newSlug.trim()) {
+    if (newSlug.trim() && newSlug.length >= 3) {
       slugMutation.mutate(newSlug.trim().toLowerCase());
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      <div className="flex justify-center py-20">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Affiliate Program</h1>
-          <p className="text-zinc-500 mt-1">
-            Earn {commissionRate}% commission on every deposit from users you refer for 1 year
-          </p>
-        </div>
-        {stats.available_balance > 0 && (
-          <Button
-            onClick={() => setShowWithdrawModal(true)}
-            className="bg-emerald-600 hover:bg-emerald-700"
-          >
-            <ArrowDownToLine className="w-4 h-4 mr-2" />
-            Withdraw ${(stats.available_balance / 100).toFixed(2)}
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-zinc-900">Affiliate Program</h1>
+        <p className="text-zinc-500 mt-1">Earn {commissionRate}% on deposits from users you refer for 1 year</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-zinc-200 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Total Referrals</p>
-              <p className="text-2xl font-bold text-zinc-900">{stats.total_referrals}</p>
-            </div>
+      {/* Balance & Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 text-white">
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className="w-4 h-4 opacity-80" />
+            <span className="text-emerald-100 text-xs">Available</span>
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-zinc-200 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Active Referrals</p>
-              <p className="text-2xl font-bold text-zinc-900">{stats.active_referrals}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-zinc-200 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <Gift className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Total Earnings</p>
-              <p className="text-2xl font-bold text-zinc-900">
-                ${(stats.total_earnings / 100).toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-zinc-200 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Available Balance</p>
-              <p className="text-2xl font-bold text-green-600">
-                ${(stats.available_balance / 100).toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Referral Link Section */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-8">
-        <h2 className="text-lg font-semibold text-zinc-900 mb-6 flex items-center gap-2">
-          <Link2 className="w-5 h-5" />
-          Your Referral Link
-        </h2>
-
-        <div className="space-y-6">
-          {/* Show actual link only if they have a custom slug */}
-          {affiliateSlug ? (
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 font-mono text-sm text-emerald-700">
-                  droidproxy.com/i/{affiliateSlug}
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => copyToClipboard(`https://droidproxy.com/i/${affiliateSlug}`)}
-                  className="shrink-0"
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setNewSlug(affiliateSlug);
-                    setIsEditingSlug(true);
-                  }}
-                  className="text-sm text-zinc-500 hover:text-zinc-700 flex items-center gap-1"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  Edit slug
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* No custom slug - show example and prompt to create one */
-            <div className="bg-zinc-50 border border-zinc-200 border-dashed rounded-xl p-6">
-              <div className="text-center mb-4">
-                <p className="text-zinc-600 mb-2">Create your personalized referral link</p>
-                <div className="inline-flex items-center gap-1 bg-white border border-zinc-200 rounded-lg px-4 py-2 font-mono text-sm">
-                  <span className="text-zinc-400">droidproxy.com/i/</span>
-                  <span className="text-emerald-600 font-semibold">yourname</span>
-                </div>
-              </div>
-
-              {isEditingSlug ? (
-                <div className="max-w-md mx-auto space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-zinc-500 whitespace-nowrap">droidproxy.com/i/</span>
-                    <input
-                      type="text"
-                      value={newSlug}
-                      onChange={(e) => {
-                        setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''));
-                        setSlugError('');
-                      }}
-                      placeholder="yourname"
-                      className="flex-1 px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      maxLength={30}
-                      autoFocus
-                    />
-                  </div>
-                  {slugError && (
-                    <p className="text-sm text-red-600 text-center">{slugError}</p>
-                  )}
-                  <p className="text-xs text-zinc-500 text-center">
-                    3-30 characters. Letters, numbers, hyphens, and underscores only.
-                  </p>
-                  <div className="flex gap-2 justify-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditingSlug(false);
-                        setSlugError('');
-                        setNewSlug('');
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveSlug}
-                      disabled={slugMutation.isPending || !newSlug.trim() || newSlug.length < 3}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      {slugMutation.isPending ? 'Saving...' : 'Create Link'}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <Button
-                    onClick={() => setIsEditingSlug(true)}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Create Your Link
-                  </Button>
-                </div>
-              )}
-            </div>
+          <div className="text-2xl font-bold">${(stats.available_balance / 100).toFixed(2)}</div>
+          {stats.available_balance >= 100 && (
+            <button
+              onClick={() => setShowWithdrawModal(true)}
+              className="mt-2 text-xs text-emerald-100 hover:text-white underline"
+            >
+              Withdraw to balance
+            </button>
           )}
+        </div>
 
-          {/* Referral code - secondary option */}
-          <div className="border-t border-zinc-100 pt-6">
-            <p className="text-sm text-zinc-500 mb-2">Or share your referral code</p>
-            <div className="flex items-center gap-3">
-              <code className="bg-zinc-100 px-4 py-2 rounded-lg font-mono text-sm">
-                {referralCode}
-              </code>
-              <button
-                onClick={() => copyToClipboard(referralCode)}
-                className="text-zinc-400 hover:text-zinc-600"
+        <div className="bg-white rounded-2xl p-4 border border-zinc-200">
+          <div className="flex items-center gap-2 mb-1">
+            <Gift className="w-4 h-4 text-zinc-400" />
+            <span className="text-zinc-500 text-xs">Total Earned</span>
+          </div>
+          <div className="text-2xl font-bold text-zinc-900">${(stats.total_earnings / 100).toFixed(2)}</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-zinc-200">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="w-4 h-4 text-zinc-400" />
+            <span className="text-zinc-500 text-xs">Referrals</span>
+          </div>
+          <div className="text-2xl font-bold text-zinc-900">{stats.total_referrals}</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-zinc-200">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="w-4 h-4 text-zinc-400" />
+            <span className="text-zinc-500 text-xs">Active</span>
+          </div>
+          <div className="text-2xl font-bold text-zinc-900">{stats.active_referrals}</div>
+        </div>
+      </div>
+
+      {/* Referral Link */}
+      <div className="bg-white rounded-2xl p-6 border border-zinc-200">
+        <div className="flex items-center gap-2 mb-4">
+          <Link2 className="w-5 h-5 text-zinc-400" />
+          <h3 className="font-semibold text-zinc-900">Your Invite Link</h3>
+        </div>
+
+        {affiliateSlug ? (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 font-mono text-sm text-emerald-700">
+              droidproxy.com/i/{affiliateSlug}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => copyToClipboard(`https://droidproxy.com/i/${affiliateSlug}`)}
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            </Button>
+            <button
+              onClick={() => { setNewSlug(affiliateSlug); setIsEditingSlug(true); }}
+              className="text-zinc-400 hover:text-zinc-600"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          </div>
+        ) : isEditingSlug ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-zinc-500">droidproxy.com/i/</span>
+              <input
+                type="text"
+                value={newSlug}
+                onChange={(e) => {
+                  setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''));
+                  setSlugError('');
+                }}
+                placeholder="yourname"
+                className="flex-1 px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                maxLength={30}
+                autoFocus
+              />
+              <Button
+                size="sm"
+                onClick={handleSaveSlug}
+                disabled={slugMutation.isPending || newSlug.length < 3}
+                className="bg-emerald-600 hover:bg-emerald-700"
               >
-                <Copy className="w-4 h-4" />
-              </button>
-              <span className="text-xs text-zinc-400">
-                Users can enter this at registration
-              </span>
+                Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setIsEditingSlug(false); setSlugError(''); }}>
+                Cancel
+              </Button>
             </div>
+            {slugError && <p className="text-sm text-red-600">{slugError}</p>}
+            <p className="text-xs text-zinc-500">3-30 characters. Letters, numbers, hyphens, underscores.</p>
           </div>
+        ) : (
+          <div className="flex items-center justify-between bg-zinc-50 border border-dashed border-zinc-300 rounded-xl px-4 py-3">
+            <div className="text-sm text-zinc-500">
+              <span className="text-zinc-400">droidproxy.com/i/</span>
+              <span className="text-emerald-600 font-medium">yourname</span>
+            </div>
+            <Button size="sm" onClick={() => setIsEditingSlug(true)} className="bg-emerald-600 hover:bg-emerald-700">
+              Create Link
+            </Button>
+          </div>
+        )}
+
+        <div className="mt-4 pt-4 border-t border-zinc-100 flex items-center gap-3">
+          <span className="text-sm text-zinc-500">Referral code:</span>
+          <code className="bg-zinc-100 px-2 py-1 rounded text-sm font-mono">{referralCode}</code>
+          <button onClick={() => copyToClipboard(referralCode)} className="text-zinc-400 hover:text-zinc-600">
+            <Copy className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Referrals and Earnings */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Referrals List */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-6">
-          <h2 className="text-lg font-semibold text-zinc-900 mb-4">Recent Referrals</h2>
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Referrals */}
+        <div className="bg-white rounded-2xl p-6 border border-zinc-200">
+          <h3 className="font-semibold text-zinc-900 mb-4">Recent Referrals</h3>
           {referrals.length === 0 ? (
-            <div className="text-center py-8 text-zinc-500">
-              <Users className="w-12 h-12 mx-auto mb-3 text-zinc-300" />
-              <p>No referrals yet</p>
-              <p className="text-sm mt-1">Share your link to start earning</p>
+            <div className="text-center py-6 text-zinc-500 text-sm">
+              <Users className="w-8 h-8 mx-auto mb-2 text-zinc-300" />
+              No referrals yet
             </div>
           ) : (
-            <div className="space-y-3">
-              {referrals.slice(0, 10).map((referral) => (
-                <div
-                  key={referral.id}
-                  className="flex items-center justify-between py-2 border-b border-zinc-100 last:border-0"
-                >
+            <div className="space-y-2">
+              {referrals.slice(0, 5).map((r) => (
+                <div key={r.id} className="flex items-center justify-between py-2 border-b border-zinc-100 last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-zinc-900">{referral.user_email}</p>
-                    <p className="text-xs text-zinc-500">
-                      {new Date(referral.created_at).toLocaleDateString()}
-                    </p>
+                    <p className="text-sm font-medium text-zinc-900">{r.user_email}</p>
+                    <p className="text-xs text-zinc-500">{new Date(r.created_at).toLocaleDateString()}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-emerald-600">
-                      ${(referral.total_earnings / 100).toFixed(2)}
-                    </p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      referral.status === 'active'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-zinc-100 text-zinc-600'
-                    }`}>
-                      {referral.status}
-                    </span>
-                  </div>
+                  <span className="text-sm font-medium text-emerald-600">${(r.total_earnings / 100).toFixed(2)}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Earnings List */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-6">
-          <h2 className="text-lg font-semibold text-zinc-900 mb-4">Recent Earnings</h2>
+        {/* Earnings */}
+        <div className="bg-white rounded-2xl p-6 border border-zinc-200">
+          <h3 className="font-semibold text-zinc-900 mb-4">Recent Earnings</h3>
           {earnings.length === 0 ? (
-            <div className="text-center py-8 text-zinc-500">
-              <DollarSign className="w-12 h-12 mx-auto mb-3 text-zinc-300" />
-              <p>No earnings yet</p>
-              <p className="text-sm mt-1">Earnings appear when referrals deposit</p>
+            <div className="text-center py-6 text-zinc-500 text-sm">
+              <DollarSign className="w-8 h-8 mx-auto mb-2 text-zinc-300" />
+              No earnings yet
             </div>
           ) : (
-            <div className="space-y-3">
-              {earnings.slice(0, 10).map((earning) => (
-                <div
-                  key={earning.id}
-                  className="flex items-center justify-between py-2 border-b border-zinc-100 last:border-0"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-zinc-900">{earning.user_email}</p>
-                    <p className="text-xs text-zinc-500">
-                      From ${(earning.original_amount / 100).toFixed(2)} deposit
-                    </p>
+            <div className="space-y-2">
+              {earnings.slice(0, 5).map((e) => (
+                <div key={e.id} className="flex items-center justify-between py-2 border-b border-zinc-100 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <ArrowDownRight className="w-3 h-3 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">+${(e.amount / 100).toFixed(2)}</p>
+                      <p className="text-xs text-zinc-500">from ${(e.original_amount / 100).toFixed(2)} deposit</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-emerald-600">
-                      +${(earning.amount / 100).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {new Date(earning.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
+                  <span className="text-xs text-zinc-500">{new Date(e.created_at).toLocaleDateString()}</span>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* How it works */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-6">
-        <h2 className="text-lg font-semibold text-zinc-900 mb-4">How it works</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold shrink-0">
-              1
-            </div>
-            <div>
-              <p className="font-medium text-zinc-900">Share your link</p>
-              <p className="text-sm text-zinc-600 mt-1">
-                Send your unique referral link to friends, post it on social media, or add it to your website.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold shrink-0">
-              2
-            </div>
-            <div>
-              <p className="font-medium text-zinc-900">They sign up & deposit</p>
-              <p className="text-sm text-zinc-600 mt-1">
-                When someone clicks your link and creates an account, they're linked to you for 1 year.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold shrink-0">
-              3
-            </div>
-            <div>
-              <p className="font-medium text-zinc-900">Earn {commissionRate}% for 1 year</p>
-              <p className="text-sm text-zinc-600 mt-1">
-                Every time they add balance, you earn {commissionRate}% commission for 1 year.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Withdraw Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4">
-              Withdraw to Balance
-            </h3>
-            <p className="text-sm text-zinc-600 mb-4">
-              Transfer your affiliate earnings to your main balance to use for phone subscriptions.
-            </p>
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+            <h3 className="font-semibold text-zinc-900 mb-2">Withdraw to Balance</h3>
+            <p className="text-sm text-zinc-500 mb-4">Transfer earnings to your main balance.</p>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                Amount to withdraw
-              </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">$</span>
                 <input
@@ -489,31 +339,20 @@ export default function Affiliate() {
                   step="0.01"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder={`Max: ${(stats.available_balance / 100).toFixed(2)}`}
-                  className="w-full pl-7 pr-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder={(stats.available_balance / 100).toFixed(2)}
+                  className="w-full pl-7 pr-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
-                Available: ${(stats.available_balance / 100).toFixed(2)} (min $1.00)
-              </p>
+              <p className="text-xs text-zinc-500 mt-1">Available: ${(stats.available_balance / 100).toFixed(2)} (min $1)</p>
             </div>
 
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowWithdrawModal(false)}
-                className="flex-1"
-              >
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowWithdrawModal(false)} className="flex-1">
                 Cancel
               </Button>
               <Button
                 onClick={handleWithdraw}
-                disabled={
-                  withdrawMutation.isPending ||
-                  !withdrawAmount ||
-                  parseFloat(withdrawAmount) < 1 ||
-                  parseFloat(withdrawAmount) * 100 > stats.available_balance
-                }
+                disabled={withdrawMutation.isPending || !withdrawAmount || parseFloat(withdrawAmount) < 1 || parseFloat(withdrawAmount) * 100 > stats.available_balance}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700"
               >
                 {withdrawMutation.isPending ? 'Processing...' : 'Withdraw'}
