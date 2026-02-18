@@ -149,7 +149,7 @@ export default function Affiliate() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">Affiliate Program</h1>
           <p className="text-zinc-500 mt-1">
-            Earn {commissionRate}% commission on every deposit from users you refer
+            Earn {commissionRate}% commission on every deposit from users you refer for 1 year
           </p>
         </div>
         {stats.available_balance > 0 && (
