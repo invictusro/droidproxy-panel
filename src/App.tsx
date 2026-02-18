@@ -133,7 +133,7 @@ function AppRoutes() {
           isAuthenticated ? <Navigate to="/phones" replace /> : <ForgotPassword />
         } />
         <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
-        <Route path="/r/:code" element={<ReferralRedirect />} />
+        <Route path="/i/:code" element={<ReferralRedirect />} />
         <Route path="/apk" element={<APKRedirect />} />
         {/* Public API docs - redirect to standalone page */}
         <Route path="/docs" element={<DocsRedirect />} />

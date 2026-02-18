@@ -9,9 +9,7 @@ import {
   ArrowDownToLine,
   TrendingUp,
   Gift,
-  Edit2,
-  Save,
-  X
+  Edit2
 } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '@/components/ui/button';
@@ -107,7 +105,6 @@ export default function Affiliate() {
     withdrawn_amount: 0,
   };
 
-  const referralLink = statsData?.referral_link || '';
   const referralCode = statsData?.referral_code || '';
   const affiliateSlug = statsData?.affiliate_slug || '';
   const commissionRate = statsData?.commission_rate || 10;
@@ -143,7 +140,7 @@ export default function Affiliate() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-6xl mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -219,107 +216,120 @@ export default function Affiliate() {
       </div>
 
       {/* Referral Link Section */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6">
-        <h2 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-zinc-200 p-8">
+        <h2 className="text-lg font-semibold text-zinc-900 mb-6 flex items-center gap-2">
           <Link2 className="w-5 h-5" />
           Your Referral Link
         </h2>
 
-        <div className="space-y-4">
-          {/* Main referral link */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3 font-mono text-sm">
-              {referralLink}
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => copyToClipboard(referralLink)}
-              className="shrink-0"
-            >
-              {copied ? (
-                <Check className="w-4 h-4 text-green-600" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-
-          {/* Custom slug section */}
-          <div className="border-t border-zinc-100 pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-zinc-700">Custom Link (optional)</p>
-              {!isEditingSlug && (
+        <div className="space-y-6">
+          {/* Show actual link only if they have a custom slug */}
+          {affiliateSlug ? (
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 font-mono text-sm text-emerald-700">
+                  droidproxy.com/i/{affiliateSlug}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => copyToClipboard(`https://droidproxy.com/i/${affiliateSlug}`)}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
                 <button
                   onClick={() => {
-                    setNewSlug(affiliateSlug || '');
+                    setNewSlug(affiliateSlug);
                     setIsEditingSlug(true);
                   }}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                  className="text-sm text-zinc-500 hover:text-zinc-700 flex items-center gap-1"
                 >
                   <Edit2 className="w-3 h-3" />
-                  {affiliateSlug ? 'Edit' : 'Set custom slug'}
+                  Edit slug
                 </button>
-              )}
+              </div>
             </div>
+          ) : (
+            /* No custom slug - show example and prompt to create one */
+            <div className="bg-zinc-50 border border-zinc-200 border-dashed rounded-xl p-6">
+              <div className="text-center mb-4">
+                <p className="text-zinc-600 mb-2">Create your personalized referral link</p>
+                <div className="inline-flex items-center gap-1 bg-white border border-zinc-200 rounded-lg px-4 py-2 font-mono text-sm">
+                  <span className="text-zinc-400">droidproxy.com/i/</span>
+                  <span className="text-emerald-600 font-semibold">yourname</span>
+                </div>
+              </div>
 
-            {isEditingSlug ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-zinc-500">droidproxy.com/r/</span>
-                  <input
-                    type="text"
-                    value={newSlug}
-                    onChange={(e) => {
-                      setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''));
-                      setSlugError('');
-                    }}
-                    placeholder="your-custom-slug"
-                    className="flex-1 px-3 py-1.5 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    maxLength={30}
-                  />
+              {isEditingSlug ? (
+                <div className="max-w-md mx-auto space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-zinc-500 whitespace-nowrap">droidproxy.com/i/</span>
+                    <input
+                      type="text"
+                      value={newSlug}
+                      onChange={(e) => {
+                        setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''));
+                        setSlugError('');
+                      }}
+                      placeholder="yourname"
+                      className="flex-1 px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      maxLength={30}
+                      autoFocus
+                    />
+                  </div>
+                  {slugError && (
+                    <p className="text-sm text-red-600 text-center">{slugError}</p>
+                  )}
+                  <p className="text-xs text-zinc-500 text-center">
+                    3-30 characters. Letters, numbers, hyphens, and underscores only.
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditingSlug(false);
+                        setSlugError('');
+                        setNewSlug('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveSlug}
+                      disabled={slugMutation.isPending || !newSlug.trim() || newSlug.length < 3}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      {slugMutation.isPending ? 'Saving...' : 'Create Link'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center">
                   <Button
-                    size="sm"
-                    onClick={handleSaveSlug}
-                    disabled={slugMutation.isPending || !newSlug.trim()}
+                    onClick={() => setIsEditingSlug(true)}
                     className="bg-emerald-600 hover:bg-emerald-700"
                   >
-                    <Save className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditingSlug(false);
-                      setSlugError('');
-                    }}
-                  >
-                    <X className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Create Your Link
                   </Button>
                 </div>
-                {slugError && (
-                  <p className="text-sm text-red-600">{slugError}</p>
-                )}
-                <p className="text-xs text-zinc-500">
-                  3-30 characters. Letters, numbers, hyphens, and underscores only.
-                </p>
-              </div>
-            ) : affiliateSlug ? (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-zinc-500">droidproxy.com/r/</span>
-                <span className="font-medium text-emerald-600">{affiliateSlug}</span>
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500">
-                Create a memorable custom link like <span className="font-mono">droidproxy.com/r/john</span>
-              </p>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
-          {/* Referral code */}
-          <div className="border-t border-zinc-100 pt-4">
-            <p className="text-sm text-zinc-500 mb-1">Referral Code</p>
-            <div className="flex items-center gap-2">
-              <code className="bg-zinc-100 px-3 py-1.5 rounded font-mono text-sm">
+          {/* Referral code - secondary option */}
+          <div className="border-t border-zinc-100 pt-6">
+            <p className="text-sm text-zinc-500 mb-2">Or share your referral code</p>
+            <div className="flex items-center gap-3">
+              <code className="bg-zinc-100 px-4 py-2 rounded-lg font-mono text-sm">
                 {referralCode}
               </code>
               <button
@@ -328,6 +338,9 @@ export default function Affiliate() {
               >
                 <Copy className="w-4 h-4" />
               </button>
+              <span className="text-xs text-zinc-400">
+                Users can enter this at registration
+              </span>
             </div>
           </div>
         </div>
@@ -434,7 +447,7 @@ export default function Affiliate() {
             <div>
               <p className="font-medium text-zinc-900">They sign up & deposit</p>
               <p className="text-sm text-zinc-600 mt-1">
-                When someone clicks your link and creates an account, they're linked to you permanently.
+                When someone clicks your link and creates an account, they're linked to you for 1 year.
               </p>
             </div>
           </div>
@@ -443,9 +456,9 @@ export default function Affiliate() {
               3
             </div>
             <div>
-              <p className="font-medium text-zinc-900">Earn {commissionRate}% lifetime</p>
+              <p className="font-medium text-zinc-900">Earn {commissionRate}% for 1 year</p>
               <p className="text-sm text-zinc-600 mt-1">
-                Every time they add balance, you earn {commissionRate}% commission. Forever.
+                Every time they add balance, you earn {commissionRate}% commission for 1 year.
               </p>
             </div>
           </div>
