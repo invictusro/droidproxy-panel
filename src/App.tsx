@@ -50,6 +50,12 @@ function ReferralRedirect() {
   useEffect(() => {
     if (code) {
       localStorage.setItem('referral_code', code);
+      // Track the click (fire and forget)
+      fetch(`${import.meta.env.VITE_API_URL}/affiliate/track/${code}`, {
+        method: 'POST',
+      }).catch(() => {
+        // Ignore errors - tracking is best-effort
+      });
     }
     navigate('/register', { replace: true });
   }, [code, navigate]);
