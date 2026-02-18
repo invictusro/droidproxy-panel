@@ -7,7 +7,7 @@ import {
   Copy,
   Check,
   ArrowDownRight,
-  MousePointerClick,
+  TrendingUp,
   Gift,
   Edit2,
   Wallet,
@@ -125,7 +125,6 @@ export default function Affiliate() {
   const referralCode = statsData?.referral_code || '';
   const affiliateSlug = statsData?.affiliate_slug || '';
   const commissionRate = statsData?.commission_rate || 10;
-  const clicks = statsData?.clicks || 0;
 
   const referrals: Referral[] = referralsData?.referrals || [];
   const earnings: Earning[] = earningsData?.earnings || [];
@@ -200,10 +199,10 @@ export default function Affiliate() {
 
         <div className="bg-white rounded-2xl p-4 border border-zinc-200">
           <div className="flex items-center gap-2 mb-1">
-            <MousePointerClick className="w-4 h-4 text-zinc-400" />
-            <span className="text-zinc-500 text-xs">Clicks</span>
+            <TrendingUp className="w-4 h-4 text-zinc-400" />
+            <span className="text-zinc-500 text-xs">Active</span>
           </div>
-          <div className="text-2xl font-bold text-zinc-900">{clicks}</div>
+          <div className="text-2xl font-bold text-zinc-900">{stats.active_referrals}</div>
         </div>
       </div>
 
