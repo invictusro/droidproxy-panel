@@ -70,6 +70,21 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
     }
   }, [searchParams]);
 
+  // Handle OAuth error from redirect
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      const errorMessages: Record<string, string> = {
+        'google_auth_failed': 'Google authentication failed. Please try again.',
+        'account_creation_failed': 'Failed to create account. Please try again or use email registration.',
+        'token_generation_failed': 'Authentication error. Please try again.',
+      };
+      setError(errorMessages[errorParam] || 'Authentication failed. Please try again.');
+      // Clear the error from URL
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [searchParams]);
+
   // Countdown timer for resend cooldown
   useEffect(() => {
     if (resendCooldown > 0) {
