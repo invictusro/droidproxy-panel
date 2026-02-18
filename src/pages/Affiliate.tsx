@@ -247,7 +247,7 @@ export default function Affiliate() {
           <h3 className="font-semibold text-zinc-900">Share & Earn</h3>
         </div>
         <p className="text-sm text-zinc-500 mb-4">
-          Share your link or give your code to friends. They can enter it at signup if they don't use your link.
+          Promote your referral link or share your code directly. Users who don't click your link can enter the code manually during registration.
         </p>
 
         {affiliateSlug ? (
