@@ -300,12 +300,12 @@ export default function Affiliate() {
                 type="text"
                 value={newSlug}
                 onChange={(e) => {
-                  setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''));
+                  setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''));
                   setSlugError('');
                 }}
-                placeholder="yourname"
+                placeholder="abc123"
                 className="flex-1 px-3 py-2 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                maxLength={30}
+                maxLength={6}
                 autoFocus
               />
               <Button
@@ -321,7 +321,7 @@ export default function Affiliate() {
               </Button>
             </div>
             {slugError && <p className="text-sm text-red-600">{slugError}</p>}
-            <p className="text-xs text-zinc-500">This will be your invite link and referral code. 3-30 characters, letters, numbers, hyphens, underscores.</p>
+            <p className="text-xs text-zinc-500">This will be your invite link and referral code. 3-6 characters, letters and numbers only.</p>
           </div>
         ) : (
           <div className="flex items-center justify-between bg-zinc-50 border border-dashed border-zinc-300 rounded-xl px-4 py-4">
