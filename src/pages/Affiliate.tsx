@@ -9,7 +9,9 @@ import {
   ArrowDownRight,
   MousePointerClick,
   Gift,
-  Edit2
+  Edit2,
+  Wallet,
+  Bitcoin
 } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '@/components/ui/button';
@@ -45,7 +47,9 @@ export default function Affiliate() {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showCryptoModal, setShowCryptoModal] = useState(false);
+  const [cryptoAddress, setCryptoAddress] = useState('');
   const [isEditingSlug, setIsEditingSlug] = useState(false);
   const [newSlug, setNewSlug] = useState('');
   const [slugError, setSlugError] = useState('');
@@ -74,13 +78,23 @@ export default function Affiliate() {
     },
   });
 
-  const withdrawMutation = useMutation({
+  const withdrawToBalanceMutation = useMutation({
     mutationFn: (amount: number) => api.withdrawAffiliate(amount),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['affiliate-stats'] });
       queryClient.invalidateQueries({ queryKey: ['me'] });
-      setShowWithdrawModal(false);
+      setShowBalanceModal(false);
       setWithdrawAmount('');
+    },
+  });
+
+  const withdrawToCryptoMutation = useMutation({
+    mutationFn: (data: { amount: number; address: string }) => api.withdrawAffiliateCrypto(data.amount, data.address),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['affiliate-stats'] });
+      setShowCryptoModal(false);
+      setWithdrawAmount('');
+      setCryptoAddress('');
     },
   });
 
@@ -119,10 +133,17 @@ export default function Affiliate() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleWithdraw = () => {
+  const handleWithdrawToBalance = () => {
     const amount = Math.round(parseFloat(withdrawAmount) * 100);
-    if (amount >= 100 && amount <= stats.available_balance) {
-      withdrawMutation.mutate(amount);
+    if (amount > 0 && amount <= stats.available_balance) {
+      withdrawToBalanceMutation.mutate(amount);
+    }
+  };
+
+  const handleWithdrawToCrypto = () => {
+    const amount = Math.round(parseFloat(withdrawAmount) * 100);
+    if (amount >= 2500 && amount <= stats.available_balance && cryptoAddress.trim()) {
+      withdrawToCryptoMutation.mutate({ amount, address: cryptoAddress.trim() });
     }
   };
 
@@ -156,14 +177,6 @@ export default function Affiliate() {
             <span className="text-emerald-100 text-xs">Available</span>
           </div>
           <div className="text-2xl font-bold">${(stats.available_balance / 100).toFixed(2)}</div>
-          {stats.available_balance >= 100 && (
-            <button
-              onClick={() => setShowWithdrawModal(true)}
-              className="mt-2 text-xs text-emerald-100 hover:text-white underline"
-            >
-              Withdraw to balance
-            </button>
-          )}
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-zinc-200">
@@ -190,6 +203,41 @@ export default function Affiliate() {
           <div className="text-2xl font-bold text-zinc-900">{clicks}</div>
         </div>
       </div>
+
+      {/* Withdraw Section */}
+      {stats.available_balance > 0 && (
+        <div className="bg-white rounded-2xl p-6 border border-zinc-200">
+          <h3 className="font-semibold text-zinc-900 mb-4">Withdraw Earnings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={() => setShowBalanceModal(true)}
+              className="flex items-center gap-4 p-4 border border-zinc-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="font-medium text-zinc-900">Add to Balance</p>
+                <p className="text-xs text-zinc-500">Transfer to your usage balance instantly</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setShowCryptoModal(true)}
+              disabled={stats.available_balance < 2500}
+              className="flex items-center gap-4 p-4 border border-zinc-200 rounded-xl hover:border-orange-300 hover:bg-orange-50/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-white"
+            >
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <Bitcoin className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="font-medium text-zinc-900">Withdraw to Crypto</p>
+                <p className="text-xs text-zinc-500">Min $25 &bull; USDT/USDC</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Referral Link */}
       <div className="bg-white rounded-2xl p-6 border border-zinc-200">
@@ -323,19 +371,26 @@ export default function Affiliate() {
         </div>
       </div>
 
-      {/* Withdraw Modal */}
-      {showWithdrawModal && (
+      {/* Add to Balance Modal */}
+      {showBalanceModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6">
-            <h3 className="font-semibold text-zinc-900 mb-2">Withdraw to Balance</h3>
-            <p className="text-sm text-zinc-500 mb-4">Transfer earnings to your main balance.</p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-zinc-900">Add to Balance</h3>
+                <p className="text-xs text-zinc-500">Transfer to your usage balance</p>
+              </div>
+            </div>
 
             <div className="mb-4">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">$</span>
                 <input
                   type="number"
-                  min="1"
+                  min="0.01"
                   max={stats.available_balance / 100}
                   step="0.01"
                   value={withdrawAmount}
@@ -344,19 +399,81 @@ export default function Affiliate() {
                   className="w-full pl-7 pr-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
-              <p className="text-xs text-zinc-500 mt-1">Available: ${(stats.available_balance / 100).toFixed(2)} (min $1)</p>
+              <p className="text-xs text-zinc-500 mt-1">Available: ${(stats.available_balance / 100).toFixed(2)}</p>
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowWithdrawModal(false)} className="flex-1">
+              <Button variant="outline" onClick={() => { setShowBalanceModal(false); setWithdrawAmount(''); }} className="flex-1">
                 Cancel
               </Button>
               <Button
-                onClick={handleWithdraw}
-                disabled={withdrawMutation.isPending || !withdrawAmount || parseFloat(withdrawAmount) < 1 || parseFloat(withdrawAmount) * 100 > stats.available_balance}
+                onClick={handleWithdrawToBalance}
+                disabled={withdrawToBalanceMutation.isPending || !withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) * 100 > stats.available_balance}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700"
               >
-                {withdrawMutation.isPending ? 'Processing...' : 'Withdraw'}
+                {withdrawToBalanceMutation.isPending ? 'Processing...' : 'Transfer'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw to Crypto Modal */}
+      {showCryptoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <Bitcoin className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-zinc-900">Withdraw to Crypto</h3>
+                <p className="text-xs text-zinc-500">USDT/USDC on any network</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-4">
+              <div>
+                <label className="text-sm text-zinc-700 mb-1 block">Amount</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">$</span>
+                  <input
+                    type="number"
+                    min="25"
+                    max={stats.available_balance / 100}
+                    step="0.01"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="25.00"
+                    className="w-full pl-7 pr-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <p className="text-xs text-zinc-500 mt-1">Min $25 &bull; Available: ${(stats.available_balance / 100).toFixed(2)}</p>
+              </div>
+
+              <div>
+                <label className="text-sm text-zinc-700 mb-1 block">Wallet Address</label>
+                <input
+                  type="text"
+                  value={cryptoAddress}
+                  onChange={(e) => setCryptoAddress(e.target.value)}
+                  placeholder="0x... or TRC20 address"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-orange-500 font-mono text-sm"
+                />
+                <p className="text-xs text-zinc-500 mt-1">We'll send USDT/USDC to this address</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setShowCryptoModal(false); setWithdrawAmount(''); setCryptoAddress(''); }} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleWithdrawToCrypto}
+                disabled={withdrawToCryptoMutation.isPending || !withdrawAmount || parseFloat(withdrawAmount) < 25 || parseFloat(withdrawAmount) * 100 > stats.available_balance || !cryptoAddress.trim()}
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+              >
+                {withdrawToCryptoMutation.isPending ? 'Processing...' : 'Request Withdrawal'}
               </Button>
             </div>
           </div>

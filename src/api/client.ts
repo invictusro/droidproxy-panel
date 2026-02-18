@@ -321,6 +321,7 @@ export const api = {
   getAffiliateReferrals: () => client.get('/affiliate/referrals'),
   getAffiliateEarnings: () => client.get('/affiliate/earnings'),
   withdrawAffiliate: (amount: number) => client.post('/affiliate/withdraw', { amount }),
+  withdrawAffiliateCrypto: (amount: number, address: string) => client.post('/affiliate/withdraw/crypto', { amount, address }),
   setAffiliateSlug: (slug: string) => client.put('/affiliate/slug', { slug }),
   validateReferralCode: (code: string) => client.get(`/affiliate/validate/${code}`),
 
