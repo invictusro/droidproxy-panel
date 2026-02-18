@@ -16,7 +16,7 @@ import {
 
 interface NavbarProps {
   user: {
-    name: string;
+    email: string;
     picture: string;
     role: string;
   } | null;
@@ -140,13 +140,13 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 gap-3 px-2 hover:bg-accent">
                     <Avatar className="h-8 w-8 ring-2 ring-border">
-                      <AvatarImage src={user.picture} alt={user.name} />
+                      <AvatarImage src={user.picture} alt={user.email} />
                       <AvatarFallback className="bg-primary/10 text-primary">
-                        {user.name.charAt(0).toUpperCase()}
+                        {user.email.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden sm:flex flex-col items-start">
-                      <span className="text-sm font-medium">{user.name}</span>
+                      <span className="text-sm font-medium">{user.email}</span>
                       {isAdmin && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-0">
                           {isSuperAdmin ? 'Super Admin' : 'Admin'}
@@ -158,7 +158,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                 <DropdownMenuContent align="end" className="w-56 bg-white border-border shadow-lg">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">{user.name}</p>
+                      <p className="text-sm font-medium">{user.email}</p>
                       <p className="text-xs text-muted-foreground">
                         {isSuperAdmin ? 'Super Administrator' : isAdmin ? 'Administrator' : 'User'}
                       </p>

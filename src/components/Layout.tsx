@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 
 interface LayoutProps {
   user: {
-    name: string;
+    email: string;
     picture: string;
     role: string;
   } | null;

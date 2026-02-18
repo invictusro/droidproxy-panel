@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, User, Loader2, AtSign, ArrowLeft, Gift } from 'lucide-react';
+import { Mail, Lock, Loader2, AtSign, ArrowLeft, Gift } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: '',
+    confirmPassword: '',
     telegram: '',
     referral: '',
   });
@@ -96,11 +96,16 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
         login(response.data.token);
         navigate('/phones');
       } else {
+        // Check password confirmation
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match');
+          setIsLoading(false);
+          return;
+        }
         const finalReferralCode = referralCode || formData.referral;
         const response = await api.register(
           formData.email,
           formData.password,
-          formData.name,
           formData.telegram || undefined,
           finalReferralCode || undefined
         );
@@ -392,23 +397,6 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
             <TabsContent value="register">
               <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="register-name" className="text-sm font-medium text-foreground">Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      id="register-name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      placeholder="Your name"
-                      className="pl-10 bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="register-email" className="text-sm font-medium text-foreground">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -438,6 +426,24 @@ export default function Login({ defaultTab = 'login' }: LoginProps) {
                       required
                       minLength={6}
                       placeholder="Min 6 characters"
+                      className="pl-10 bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-confirm-password" className="text-sm font-medium text-foreground">Confirm Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      id="register-confirm-password"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                      minLength={6}
+                      placeholder="Confirm your password"
                       className="pl-10 bg-zinc-50 border-zinc-200 focus:border-primary focus:ring-primary/20 shadow-sm"
                     />
                   </div>

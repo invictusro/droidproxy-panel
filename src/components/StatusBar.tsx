@@ -5,7 +5,7 @@ import { useCentrifugo } from '../hooks/useCentrifugo';
 import TopUpModal from './TopUpModal';
 
 interface StatusBarProps {
-  user: { name: string; picture: string; role: string } | null;
+  user: { email: string; picture: string; role: string } | null;
   centrifugoToken: string | null;
   centrifugoUrl: string | null;
 }
