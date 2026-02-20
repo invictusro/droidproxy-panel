@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown, Wallet, Headphones, Gift, Bitcoin } from 'lucide-react';
+import { Smartphone, Server, Users, LogOut, Download, Key, BookOpen, ChevronDown, Wallet, Headphones, Gift, Bitcoin, Menu, X } from 'lucide-react';
 import APKDownloadModal from './APKDownloadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
   const isSuperAdmin = user?.role === 'superadmin';
   const [showAPKModal, setShowAPKModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { path: '/phones', label: 'Phones', icon: Smartphone },
@@ -48,10 +49,18 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
     <nav className="bg-white sticky top-0 z-50 border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="sm:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+
           {/* Logo & Nav */}
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center">
-              <span className="text-3xl font-extrabold tracking-tight">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                 <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Droid</span>
                 <span className="text-gray-900">Proxy</span>
               </span>
@@ -178,6 +187,70 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
           )}
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="sm:hidden border-t border-border bg-white">
+          <div className="px-4 py-3 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
+                    isActive
+                      ? 'bg-secondary text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            {/* Download APK */}
+            <button
+              onClick={() => {
+                setShowAPKModal(true);
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent w-full"
+            >
+              <Download className="w-5 h-5" />
+              Download APK
+            </button>
+
+            {/* API Keys */}
+            <Link
+              to="/api/keys"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname.startsWith('/api')
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`}
+            >
+              <Key className="w-5 h-5" />
+              API Keys
+            </Link>
+
+            {/* Support */}
+            <a
+              href="https://t.me/invictusproxies"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
+            >
+              <Headphones className="w-5 h-5" />
+              Support
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* APK Download Modal */}
       <APKDownloadModal isOpen={showAPKModal} onClose={() => setShowAPKModal(false)} />

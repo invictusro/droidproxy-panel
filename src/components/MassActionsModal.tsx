@@ -297,7 +297,7 @@ export default function MassActionsModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); resetState(); }}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
             <TabsTrigger value="group" className="text-xs">
               <Folder className="w-3.5 h-3.5 mr-1" />
               Group
@@ -406,7 +406,7 @@ export default function MassActionsModal({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Rotation Mode</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(['off', 'timed', 'api'] as const).map((mode) => (
                     <button
                       key={mode}
@@ -484,7 +484,7 @@ export default function MassActionsModal({
 
               <div className="space-y-2">
                 <Label>Proxy Type</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(['socks5', 'http', 'both'] as const).map((type) => (
                     <button
                       key={type}

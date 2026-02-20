@@ -259,7 +259,7 @@ export default function Billing() {
       <div className="bg-white rounded-2xl p-6 border border-zinc-200">
         <h3 className="font-semibold text-zinc-900 mb-4">Add Funds</h3>
 
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-4">
           {DEPOSIT_AMOUNTS.map((amt) => (
             <button
               key={amt.value}

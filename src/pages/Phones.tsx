@@ -731,9 +731,128 @@ export default function Phones() {
         </div>
       )}
 
-      {/* Main Table */}
+      {/* Main Table / Cards */}
       {filteredPhones.length > 0 ? (
-        <Card className="bg-white border border-zinc-200 shadow-lg rounded-xl overflow-hidden">
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-sm font-semibold text-foreground">Devices ({filteredPhones.length})</span>
+              <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${connected ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-muted-foreground bg-muted'}`}>
+                {connected ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+                {connected ? 'Live' : 'Connecting...'}
+              </div>
+            </div>
+            {filteredPhones.map((phone) => {
+              const group = getPhoneGroup(phone.id);
+              const isSelected = selectedIds.has(phone.id);
+              return (
+                <Card
+                  key={phone.id}
+                  className={`bg-white border border-zinc-200 shadow-sm rounded-xl overflow-hidden cursor-pointer active:scale-[0.99] transition-transform ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                  onClick={() => {
+                    if (isSelectionMode) {
+                      toggleSelection(phone.id, { stopPropagation: () => {} } as React.MouseEvent);
+                    } else {
+                      setSelectedPhone(phone);
+                    }
+                  }}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 flex items-center justify-center flex-shrink-0">
+                          <Smartphone className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground truncate">{phone.name}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {getStatusBadge(phone.status)}
+                            {group && (
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color }} />
+                                <span className="text-xs text-muted-foreground">{group.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {isSelectionMode && (
+                        <div className="flex-shrink-0">
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Square className="w-5 h-5 text-zinc-300" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Server:</span>
+                        <span className="ml-1 text-foreground">{phone.hub_server?.location || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">SIM:</span>
+                        {phone.sim_country ? (
+                          <span className="ml-1 inline-flex items-center gap-1">
+                            <CountryFlag countryCode={phone.sim_country} className="w-4 h-auto rounded-sm" />
+                            {phone.sim_country}
+                          </span>
+                        ) : (
+                          <span className="ml-1 text-zinc-400">-</span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Conns:</span>
+                        <span className="ml-1">
+                          {phone.status === 'online' ? (
+                            <span className={phone.active_connections && phone.active_connections > 0 ? 'text-emerald-600' : ''}>
+                              {phone.active_connections ?? 0}/{phone.max_connections || '-'}
+                            </span>
+                          ) : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        {phone.has_active_license && phone.plan_tier ? (
+                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs">
+                            {phone.plan_tier.charAt(0).toUpperCase() + phone.plan_tier.slice(1)}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-amber-50 text-amber-700 border border-amber-200 text-xs">
+                            No License
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {phone.first_credential && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => copyConnectionString(phone, e)}
+                        className="w-full mt-3 h-8 gap-1.5 text-xs font-mono bg-zinc-50 hover:bg-zinc-100 border-zinc-200"
+                      >
+                        {copiedId === phone.id ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span className="text-emerald-600">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            Copy Proxy
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="hidden md:block bg-white border border-zinc-200 shadow-lg rounded-xl overflow-hidden">
           <CardHeader className="py-3 px-4 bg-gradient-to-b from-zinc-50 to-white border-b border-zinc-200">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold text-foreground">Devices</CardTitle>
@@ -905,6 +1024,7 @@ export default function Phones() {
             </div>
           </CardContent>
         </Card>
+        </>
       ) : phonesWithStatus.length > 0 ? (
         <Card className="bg-white border border-zinc-200 shadow-md rounded-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">

@@ -402,8 +402,8 @@ export default function PhoneSettingsModal({
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[calc(100%-2rem)] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 bg-gradient-to-b from-zinc-50 to-white shrink-0">
           <div className="flex items-center gap-3">
@@ -419,9 +419,9 @@ export default function PhoneSettingsModal({
         </div>
 
         {/* Main Content with Left Sidebar */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar */}
-          <div className="w-48 bg-zinc-50 border-r border-zinc-200 py-2 shrink-0 overflow-y-auto">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+          {/* Left Sidebar - Hidden on mobile, shown on md+ */}
+          <div className="hidden md:block w-48 bg-zinc-50 border-r border-zinc-200 py-2 shrink-0 overflow-y-auto">
             {menuItems.map((item) => {
               const isLicenseItem = item.id === 'license';
               const isLocked = !hasLicense && !isLicenseItem;
@@ -462,8 +462,33 @@ export default function PhoneSettingsModal({
             })}
           </div>
 
+          {/* Mobile Tab Bar */}
+          <div className="md:hidden flex overflow-x-auto border-b border-zinc-200 bg-zinc-50 shrink-0">
+            {menuItems.map((item) => {
+              const isLicenseItem = item.id === 'license';
+              const isLocked = !hasLicense && !isLicenseItem;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => !isLocked && setActiveSection(item.id as SectionId)}
+                  disabled={isLocked}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    activeSection === item.id
+                      ? 'border-emerald-600 text-emerald-600 bg-white'
+                      : isLocked
+                      ? 'border-transparent text-zinc-300 cursor-not-allowed'
+                      : 'border-transparent text-zinc-600 hover:text-zinc-900'
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Content Area */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto">
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
